@@ -55,20 +55,24 @@ func main() {
 	// just for local test
 	if share.TestMode {
 		go func() {
-			getUpdateTicker := time.NewTicker(time.Second * 5)
-			for {
-				select {
-				case <-getUpdateTicker.C:
-					for botID, botSettings := range share.BotSettings {
-						res, err := share.GetUpdates(botSettings, strconv.Itoa(share.BotOffset[botID]+1))
+			// TOOD dynamic add bot
+			for botID := range share.BotSettings {
+				go func(botID string) {
+					for {
+						botSettings, ok := share.BotSettings[botID]
+						if !ok {
+							log.Println("ERROR: BotID", botID, "not exists")
+							return
+						}
+						res, err := share.GetUpdates(botSettings, strconv.Itoa(share.BotOffset[botID]+1), 30)
 						if err != nil {
 							log.Println("ERROR:", err)
-							continue
+							return
 						}
-						log.Println(res)
+						// log.Println(res)
 						if !res.Ok {
 							log.Println("ERROR:", res.ErrorCode, res.Description)
-							continue
+							return
 						}
 						if len(res.Result) > 0 {
 							share.BotOffset[botID] = res.Result[len(res.Result)-1].UpdateID
@@ -77,17 +81,25 @@ func main() {
 							}
 						}
 					}
-				}
+				}(botID)
 			}
 		}()
 	}
 
+	// init system
+	share.UpdateNow()
+	for _, botInfo := range share.BotSettings {
+		bot.AutoDelete(botInfo)
+	}
 	updateNowTicker := time.NewTicker(time.Second)
+	autoDeleteTicker := time.NewTicker(time.Second * 5)
+
 	//go func() {
 	for {
 		select {
 		case <-updateNowTicker.C:
 			share.UpdateNow()
+		case <-autoDeleteTicker.C:
 			for _, botInfo := range share.BotSettings {
 				bot.AutoDelete(botInfo)
 			}
@@ -97,7 +109,7 @@ func main() {
 				strRes, _ := share.JsonEncode(sendData.Res)
 
 				autoDelete := 0
-				if value, ok := share.BotSettings[sendData.BotInfo["bot_id"]]["auto_delete"]; ok && value != "0" && value != "" && sendData.BotInfo["runtime_tmp_variable_ignore_auto_delete"] != "1" {
+				if value, ok := share.BotSettings[sendData.BotInfo["bot_id"]]["auto_delete"]; ok && share.BoolBotSetting(value) && sendData.BotInfo["runtime_tmp_variable_ignore_auto_delete"] != "1" {
 					autoDelete = 1
 				}
 

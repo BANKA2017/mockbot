@@ -2,16 +2,31 @@ package bot
 
 import (
 	"log"
+	"sync/atomic"
 
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
 )
 
+var AutoDeleteLock atomic.Int32
+
 func AutoDelete(bot_info share.BotSettingsType) error {
+	lock := AutoDeleteLock.Load()
+	//TODO greater than 1?
+	if lock == 1 {
+		log.Println("delete: auto pass")
+		return nil
+	} else if lock > 1 {
+		AutoDeleteLock.Store(1)
+		log.Println("delete: auto pass")
+		return nil
+	}
+	AutoDeleteLock.Add(1)
+	defer AutoDeleteLock.Add(-1)
 	messagesToDelete := new([]model.Message)
 
 	autoDeleteSeconds := 30
-	if value, ok := bot_info["auto_delete"]; !ok || value == "" || value == "0" {
+	if value, ok := bot_info["auto_delete"]; !ok || !share.BoolBotSetting(value) {
 		return nil
 
 		// TODO seconds
@@ -24,6 +39,10 @@ func AutoDelete(bot_info share.BotSettingsType) error {
 	}
 
 	share.GormDB.R.Model(&model.Message{}).Where("auto_delete = 1 AND date < ?", share.Now.Unix()-int64(autoDeleteSeconds)).Find(messagesToDelete)
+
+	if len(*messagesToDelete) == 0 {
+		return nil
+	}
 
 	messageGroupList := make(map[string][]model.Message)
 
@@ -42,7 +61,7 @@ func AutoDelete(bot_info share.BotSettingsType) error {
 
 		offset := 0
 
-		for maxRequests <= 0 || offset > lengthOfMessagesToDelete {
+		for maxRequests > 0 && offset < lengthOfMessagesToDelete {
 			end := offset + 100
 			if end > lengthOfMessagesToDelete {
 				end = lengthOfMessagesToDelete
@@ -54,7 +73,8 @@ func AutoDelete(bot_info share.BotSettingsType) error {
 				message_ids = append(message_ids, v.MessageID)
 			}
 
-			_, err := share.DeleteMessages(bot_info, chatID, message_ids)
+			r, err := share.DeleteMessages(bot_info, chatID, message_ids)
+			log.Println(r, err)
 
 			if err != nil {
 				log.Println("ERROR: auto delete (request) ", err)
@@ -67,7 +87,6 @@ func AutoDelete(bot_info share.BotSettingsType) error {
 			offset += 100
 			maxRequests--
 		}
-
 	}
 
 	return nil

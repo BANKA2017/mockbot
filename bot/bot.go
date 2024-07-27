@@ -70,8 +70,9 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	isCommandOnlyMessage := len(content.Message.Entities) == 1 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Length == len(content.Message.Text)
 
 	// enabled the word cloud?
-	///TODO word cloud filter // bot content, raw entity, callback, not forward etc.
-	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && !isForward && !isCommandOnlyMessage && value != "0" && value != "" {
+	/// TODO word cloud filter // bot content, raw entity, callback, not forward etc.
+	/// TODO save isCommandOnlyMessage for auto deleting
+	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && !isForward && !isCommandOnlyMessage && share.BoolBotSetting(value) {
 		rawJSONContent, _ := share.JsonEncode(content)
 		share.GormDB.W.Create(&model.GroupMessage{
 			MessageID:  strconv.Itoa(int(content.Message.MessageID)),

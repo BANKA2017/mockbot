@@ -11,7 +11,6 @@ import (
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
 	"github.com/psykhi/wordclouds"
-	"github.com/yanyiwu/gojieba"
 )
 
 func WordCloud(bot_info map[string]string, chat_id int64) error {
@@ -28,8 +27,7 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	for _, v := range *messages {
 		textArray = append(textArray, v.Content)
 	}
-	x := gojieba.NewJieba()
-	words := x.Tag(strings.Join(textArray, "\n"))
+	words := share.JiebaPtr.Tag(strings.Join(textArray, "\n"))
 
 	wordCounts := make(map[string]int)
 
@@ -86,7 +84,22 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	// We pass it the File and the RGBA
 	png.Encode(buf, w.Draw())
 
-	share.SaveTo("/root/mockbot/aaa.png", buf.Bytes())
+	share.SaveTo("/root/mockbot/commands/aaa.png", buf.Bytes())
+
+	//	wordCloudContentTemplate := `☁️ 07-27 热门话题 #WordCloud
+	//⏰ 截至今天 22:03
+	//🗣️ 本群 20 位朋友共产生 200 条发言
+	//🔍 看下有没有你感兴趣的关键词？
+	//
+	//活跃用户排行榜：
+	//
+	//    🥇111 贡献: 11
+	//    🥈222 贡献: 22
+	//    🥉333 贡献: 33
+	//    🎖444 贡献: 44
+	//    🎖555 贡献: 55
+	//
+	//🎉感谢这些朋友今天的分享!🎉`
 
 	return nil
 }

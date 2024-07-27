@@ -30,6 +30,7 @@ func Hey(bot_info share.BotSettingsType, chat_id int64, user_id int64, bot_reque
 		if err != nil {
 			return err
 		}
+		total += 1
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
 		total = 1
 	}

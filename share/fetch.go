@@ -88,10 +88,10 @@ type GetUpdateType struct {
 	Result      []BotRequest `json:"result,omitempty"`
 }
 
-func GetUpdates(bot_info BotSettingsType, offset string) (*GetUpdateType, error) {
+func GetUpdates(bot_info BotSettingsType, offset string, timeout int) (*GetUpdateType, error) {
 	_body, err := JsonEncode(map[string]any{
 		"offset":          offset,
-		"timeout":         5,
+		"timeout":         timeout,
 		"allowed_updates": []string{"message", "callback_query"},
 	})
 

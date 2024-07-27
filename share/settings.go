@@ -67,11 +67,13 @@ var BotChatSettingTemplate = map[string]string{
 }
 
 var BotSettingEnabledTemplate = map[string]string{
+	"":  "❌",
 	"0": "❌",
 	"1": "✅",
 }
 
 var BotSwapValueMap = map[string]string{
+	"":  "1",
 	"0": "1",
 	"1": "0",
 }
@@ -98,20 +100,24 @@ func InitBotChatSettings() {
 }
 
 func GetBotSettings(_type string, id string, key string) string {
+	tmpValue := ""
 	switch _type {
 	case "chat":
 		if _, ok := BotChatSettings[id]; !ok {
 			BotChatSettings[id] = make(BotSettingsType)
 		}
-		return BotChatSettings[id][key]
+		tmpValue = BotChatSettings[id][key]
 	case "bot":
 		if _, ok := BotSettings[id]; !ok {
 			BotSettings[id] = make(BotSettingsType)
 		}
-		return BotSettings[id][key]
-	default:
-		return ""
+		tmpValue = BotSettings[id][key]
 	}
+	return tmpValue
+}
+
+func BoolBotSetting(value string) bool {
+	return value != "" && value != "0"
 }
 
 func DeleteBotSettings(_type string, id string, key string) error {
