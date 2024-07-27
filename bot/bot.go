@@ -29,9 +29,13 @@ var CommandSettings = map[string]CommandListItem{
 	"/wc":            {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
 	"/system_set":    {Level: []string{"staff"}, ChatType: []string{"private"}},
 	"/system_get":    {Level: []string{"staff"}, ChatType: []string{"private"}},
+	"/bot_settings":  {Level: []string{"staff"}, ChatType: []string{"private"}},
 }
 
 var CommandList = []string{}
+
+// TODO cache key board
+// var CallbackInlineKeyboardCache sync.Map
 
 func InitCommandList() {
 	for command := range CommandSettings {
@@ -58,14 +62,16 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	// precheck
 	isAtBot := false
+	isPrivate := content.Message.Chat.Type == "private"
 	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
-	isFromABot := content.Message.From.IsBot
-	fmt.Println("CALLBACK", content.CallbackQuery)
+	isFromBot := content.Message.From.IsBot
 	isCallback := content.CallbackQuery.ID != ""
+	isForward := content.Message.ForwardFromMessageID != 0
+	isCommandOnlyMessage := len(content.Message.Entities) == 1 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Length == len(content.Message.Text)
 
 	// enabled the word cloud?
-	///TODO word cloud filter // bot content, raw entity, callback etc.
-	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromABot && !isCallback && value != "0" && value != "" {
+	///TODO word cloud filter // bot content, raw entity, callback, not forward etc.
+	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && !isForward && !isCommandOnlyMessage && value != "0" && value != "" {
 		rawJSONContent, _ := share.JsonEncode(content)
 		share.GormDB.W.Create(&model.GroupMessage{
 			MessageID:  strconv.Itoa(int(content.Message.MessageID)),
@@ -77,16 +83,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	}
 
 	// callback
-	fmt.Println("CALLBACK:", isCallback)
 	if isCallback {
-		res, err := share.GetChatMember(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID))
-		if err != nil {
-			return 500, fmt.Errorf("Unable to get sender status")
-		}
-		if !res.Ok || !slices.Contains([]string{"administrator", "creator"}, res.Result.Status) {
-			return 403, fmt.Errorf("Not the administrator")
-		}
-
 		// TODO check cors?
 		// TODO fix concurrent?
 
@@ -94,13 +91,33 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 		// TODO FIX!!! DO NOT TRUST THE INPUTED DATA!!!!!!
 		/// INPUT THEM FROM YOUR TEMPLATE
-		if len(data) < 3 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && !slices.Contains([]string{"mute", "enable_word_cloud"}, data[1])) || (data[0] == "bot" && !slices.Contains([]string{"auto_delete_seconds"}, data[1]) || !slices.Contains([]string{"0", "1"}, data[2])) {
+		if len(data) < 3 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && !slices.Contains([]string{"mute", "enable_word_cloud"}, data[1])) || (data[0] == "bot" && !slices.Contains([]string{"auto_delete"}, data[1]) || !slices.Contains([]string{"0", "1"}, data[2])) {
 			return 400, fmt.Errorf("Invalid callback data")
+		}
+
+		switch data[0] {
+		case "chat":
+			res, err := share.GetChatMember(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID))
+			if err != nil {
+				return 500, fmt.Errorf("Unable to get sender status")
+			}
+			if !res.Ok || !slices.Contains([]string{"administrator", "creator"}, res.Result.Status) {
+				return 403, fmt.Errorf("Not the administrator")
+			}
+		case "bot":
+			// staff only
+			staffInfo := new(model.Staff)
+			err := share.GormDB.R.Model(&model.Staff{}).Where("id = ?", content.CallbackQuery.From.ID).First(staffInfo).Error
+			if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+				return 403, fmt.Errorf("Not the staff")
+			} else if err != nil {
+				return 500, fmt.Errorf("Unable to get staff status")
+			}
 		}
 
 		callbackID := strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID))
 		if data[0] == "bot" {
-			callbackID = strconv.Itoa(int(content.CallbackQuery.From.ID))
+			callbackID = strconv.Itoa(int(content.CallbackQuery.Message.From.ID))
 		}
 
 		share.SetBotSettings(data[0], callbackID, data[1], data[2])
@@ -114,7 +131,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 			for callbackX = range content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY] {
 				if content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].CallbackData == content.CallbackQuery.Data {
 					findCallback = true
-					content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].Text = fmt.Sprintf("%s: %s", data[1], share.BotSettingEnabledTemplate[data[2]])
+					content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].Text = fmt.Sprintf("%s %s", share.BotSettingEnabledTemplate[data[2]], data[1])
 					data[2] = share.BotSwapValueMap[data[2]]
 
 					content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].CallbackData = strings.Join(data, ":")
@@ -127,7 +144,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 		}
 
 		bot_info["runtime_tmp_variable_ignore_auto_delete"] = "1"
-		_, err = share.EditMessageText(bot_info, strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID)), strconv.Itoa(int(content.CallbackQuery.Message.MessageID)), map[string]any{
+		_, err := share.EditMessageText(bot_info, strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID)), strconv.Itoa(int(content.CallbackQuery.Message.MessageID)), map[string]any{
 			"text":         content.CallbackQuery.Message.Text,
 			"reply_markup": content.CallbackQuery.Message.ReplyMarkup,
 		})
@@ -152,7 +169,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	// normal content
 	if len(content.Message.Text) <= 2 || !strings.HasPrefix(content.Message.Text, "/") {
 		// at the bot or reply to the bot
-		if isAtBot || isReplyTheBot {
+		if isPrivate || isAtBot || isReplyTheBot {
 			// meow
 			/// TODO send random neko meme
 			if isMeow(content.Message.Text) {
@@ -176,7 +193,13 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 		if !isOriginalBotCommand {
 			command.At(bot_info, content.Message.Chat.ID, content)
 		} else {
-			if commandInfo, ok := CommandSettings[realCommand]; ok && slices.Contains(commandInfo.Level, "staff") {
+			// chat type
+			if commandInfo := CommandSettings[realCommand]; !slices.Contains(commandInfo.ChatType, content.Message.Chat.Type) {
+				return 403, fmt.Errorf("Invalid chat type")
+			}
+
+			// role
+			if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "staff") {
 				// staff only
 				if !isOriginalBotCommand {
 					return 400, fmt.Errorf("Command type is not allowed")
@@ -188,7 +211,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 				} else if err != nil {
 					return 500, fmt.Errorf("Unable to get staff status")
 				}
-			} else if commandInfo, ok := CommandSettings[realCommand]; ok && slices.Contains(commandInfo.Level, "administrator") {
+			} else if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "administrator") {
 				// group administrator only
 				if !isOriginalBotCommand {
 					return 400, fmt.Errorf("Command type is not allowed")
@@ -212,7 +235,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 				case "/get":
 					err = command.Get(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
 				case "/chat_settings":
-					err = command.GetAll(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
+					err = command.ChatSettings(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
 				case "/set":
 					err = command.Set(bot_info, content.Message.Chat.ID, realContent)
 				case "/wc":
@@ -221,6 +244,8 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 					err = command.SetSystem(bot_info, content.Message.Chat.ID, realContent)
 				case "/system_get":
 					err = command.GetSystem(bot_info, content.Message.Chat.ID, realContent)
+				case "/bot_settings":
+					err = command.BotSettings(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
 				}
 				if err != nil {
 					log.Println(err)

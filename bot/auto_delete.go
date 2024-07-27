@@ -2,7 +2,6 @@ package bot
 
 import (
 	"log"
-	"strconv"
 
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
@@ -11,17 +10,20 @@ import (
 func AutoDelete(bot_info share.BotSettingsType) error {
 	messagesToDelete := new([]model.Message)
 
-	autoDeleteSeconds := 10
-	if value, ok := bot_info["auto_delete_seconds"]; ok && value != "" {
-		numSeconds, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			log.Println("ERROR: Parse `auto_delete_seconds` -> " + value + " failed")
-		} else if numSeconds > 0 {
-			autoDeleteSeconds = int(numSeconds)
-		}
+	autoDeleteSeconds := 30
+	if value, ok := bot_info["auto_delete"]; !ok || value == "" || value == "0" {
+		return nil
+
+		// TODO seconds
+		/// numSeconds, err := strconv.ParseInt(value, 10, 64)
+		/// if err != nil {
+		/// 	log.Println("ERROR: Parse `auto_delete` -> " + value + " failed")
+		/// } else if numSeconds > 0 {
+		/// 	autoDeleteSeconds = int(numSeconds)
+		/// }
 	}
 
-	share.GormDB.R.Model(&model.Message{}).Where("auto_delete = 0 AND date < ?", share.Now.Unix()-int64(autoDeleteSeconds)).Find(messagesToDelete)
+	share.GormDB.R.Model(&model.Message{}).Where("auto_delete = 1 AND date < ?", share.Now.Unix()-int64(autoDeleteSeconds)).Find(messagesToDelete)
 
 	messageGroupList := make(map[string][]model.Message)
 

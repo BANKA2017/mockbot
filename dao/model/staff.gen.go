@@ -8,9 +8,9 @@ const TableNameStaff = "staff"
 
 // Staff mapped from table <staff>
 type Staff struct {
-	ID    int32  `gorm:"column:id;primaryKey" json:"id"`
+	ID    int32  `gorm:"column:id;not null" json:"id"`
 	Role  string `gorm:"column:role;not null" json:"role"`
-	BotID int32  `gorm:"column:bot_id" json:"bot_id"`
+	BotID int32  `gorm:"column:bot_id;not null" json:"bot_id"`
 }
 
 // TableName Staff's table name

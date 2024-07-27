@@ -46,7 +46,7 @@ func Fetch(_url string, _method string, _body []byte, _headers map[string]string
 		log.Println("fetch:", err)
 		return nil, err
 	}
-	log.Println(string(response[:]))
+	log.Println(_url, string(response[:]))
 
 	return response[:], err
 }
@@ -89,7 +89,19 @@ type GetUpdateType struct {
 }
 
 func GetUpdates(bot_info BotSettingsType, offset string) (*GetUpdateType, error) {
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%s", bot_info["token"], offset), "GET", nil, map[string]string{})
+	_body, err := JsonEncode(map[string]any{
+		"offset":          offset,
+		"timeout":         5,
+		"allowed_updates": []string{"message", "callback_query"},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates", bot_info["token"]), "POST", _body, map[string]string{
+		"Content-Type": "application/json",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -107,13 +119,7 @@ type GetChatMemberType struct {
 	ErrorCode   int    `json:"error_code,omitempty"`
 	Description string `json:"description,omitempty"`
 	Result      struct {
-		User struct {
-			ID        int    `json:"id,omitempty"`
-			IsBot     bool   `json:"is_bot,omitempty"`
-			FirstName string `json:"first_name,omitempty"`
-			LastName  string `json:"last_name,omitempty"`
-			Username  string `json:"username,omitempty"`
-		} `json:"user,omitempty"`
+		User                TgUser `json:"user,omitempty"`
 		Status              string `json:"status,omitempty"`
 		CanBeEdited         bool   `json:"can_be_edited,omitempty"`
 		CanManageChat       bool   `json:"can_manage_chat,omitempty"`
@@ -153,20 +159,11 @@ type SendMessageType struct {
 	ErrorCode   int    `json:"error_code,omitempty"`
 	Description string `json:"description,omitempty"`
 	Result      struct {
-		MessageID int `json:"message_id,omitempty"`
-		From      struct {
-			ID        int    `json:"id,omitempty"`
-			IsBot     bool   `json:"is_bot,omitempty"`
-			FirstName string `json:"first_name,omitempty"`
-			Username  string `json:"username,omitempty"`
-		} `json:"from,omitempty"`
-		Chat struct {
-			ID    int64  `json:"id,omitempty"`
-			Title string `json:"title,omitempty"`
-			Type  string `json:"type,omitempty"`
-		} `json:"chat,omitempty"`
-		Date int    `json:"date,omitempty"`
-		Text string `json:"text,omitempty"`
+		MessageID int    `json:"message_id,omitempty"`
+		From      TgUser `json:"from,omitempty"`
+		Chat      TgChat `json:"chat,omitempty"`
+		Date      int    `json:"date,omitempty"`
+		Text      string `json:"text,omitempty"`
 	} `json:"result,omitempty"`
 }
 
@@ -176,7 +173,7 @@ func SendMessage(bot_info BotSettingsType, chat_id int64, text string, ext map[s
 
 	_body, err := JsonEncode(ext)
 
-	log.Println(string(_body))
+	// log.Println(string(_body))
 
 	if err != nil {
 		return nil, err
@@ -271,5 +268,4 @@ func EditMessageText(bot_info BotSettingsType, chat_id string, message_id string
 	}
 
 	return resp, nil
-
 }

@@ -9,6 +9,11 @@ import (
 )
 
 var BotSettings = make(map[string]BotSettingsType)
+
+var BotSettingTemplate = map[string]string{
+	"auto_delete": "0",
+}
+
 var BotOffset = make(map[string]int)
 
 func InitBotSettings() {
@@ -21,7 +26,13 @@ func InitBotSettings() {
 	for _, v := range *botSettingsDB {
 		if _, ok := BotSettings[v.BotID]; !ok {
 			BotSettings[v.BotID] = make(BotSettingsType) //Settings
+
+			// default values
 			BotSettings[v.BotID]["bot_id"] = v.BotID
+			for templateKey, templateValue := range BotSettingTemplate {
+				BotSettings[v.BotID][templateKey] = templateValue
+			}
+
 			BotOffset[v.BotID] = 0 //Offset
 		}
 		BotSettings[v.BotID][v.Key] = v.Value
@@ -36,9 +47,7 @@ func SyncBotSettings() {
 			log.Println("ERROR: Unable to sync bot data ", botID)
 			continue
 		}
-		log.Println(BotSettings)
 		SetBotSettings("bot", botID, "first_name", resp.Result.FirstName)
-		log.Println(BotSettings)
 		SetBotSettings("bot", botID, "username", resp.Result.Username)
 
 		// TODO more settings
@@ -83,8 +92,6 @@ func InitBotChatSettings() {
 			for templateKey, templateValue := range BotChatSettingTemplate {
 				BotChatSettings[v.ChatID][templateKey] = templateValue
 			}
-
-			BotOffset[v.ChatID] = 0 //Offset
 		}
 		BotChatSettings[v.ChatID][v.Key] = v.Value
 	}

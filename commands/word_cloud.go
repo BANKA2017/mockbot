@@ -2,8 +2,10 @@ package command
 
 import (
 	"bytes"
+	"fmt"
 	"image/color"
 	"image/png"
+	"regexp"
 	"strings"
 
 	"github.com/BANKA2017/mockbot/dao/model"
@@ -26,31 +28,44 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	for _, v := range *messages {
 		textArray = append(textArray, v.Content)
 	}
-
-	words := gojieba.NewJieba().Cut(strings.Join(textArray, "\n"), true)
+	x := gojieba.NewJieba()
+	words := x.Tag(strings.Join(textArray, "\n"))
 
 	wordCounts := make(map[string]int)
 
+	// /n
 	for _, word := range words {
-		if _, ok := wordCounts[word]; !ok {
-			wordCounts[word] = 0
+		if strings.HasSuffix(word, "/n") {
+			word = regexp.MustCompile(`(?m)/(n)$`).ReplaceAllString(word, "")
+			if _, ok := wordCounts[word]; !ok {
+				wordCounts[word] = 0
+			}
+			wordCounts[word]++
 		}
-		wordCounts[word]++
-	}
 
-	// remove count <= 5
-	for name, count := range wordCounts {
-		if count <= 5 {
-			delete(wordCounts, name)
-		}
 	}
-
+	fmt.Println(wordCounts)
 	var DefaultColors = []color.RGBA{
-		{0x1b, 0x1b, 0x1b, 0xff},
-		{0x48, 0x48, 0x4B, 0xff},
-		{0x59, 0x3a, 0xee, 0xff},
-		{0x65, 0xCD, 0xFA, 0xff},
-		{0x70, 0xD6, 0xBF, 0xff},
+		{0x2e, 0xc7, 0xc9, 0xff},
+		{0xb6, 0xa2, 0xde, 0xff},
+		{0x5a, 0xb1, 0xef, 0xff},
+		{0xff, 0xb9, 0x80, 0xff},
+		{0xd8, 0x7a, 0x80, 0xff},
+		{0x8d, 0x98, 0xb3, 0xff},
+		{0xe5, 0xcf, 0x0d, 0xff},
+		{0x97, 0xb5, 0x52, 0xff},
+		{0x95, 0x70, 0x6d, 0xff},
+		{0xdc, 0x69, 0xaa, 0xff},
+		{0x07, 0xa2, 0xa4, 0xff},
+		{0x9a, 0x7f, 0xd1, 0xff},
+		{0x58, 0x8d, 0xd5, 0xff},
+		{0xf5, 0x99, 0x4e, 0xff},
+		{0xc0, 0x50, 0x50, 0xff},
+		{0x59, 0x67, 0x8c, 0xff},
+		{0xc9, 0xab, 0x00, 0xff},
+		{0x7e, 0xb0, 0x0a, 0xff},
+		{0x6f, 0x55, 0x53, 0xff},
+		{0xc1, 0x40, 0x89, 0xff},
 	}
 	colors := make([]color.Color, 0)
 	for _, c := range DefaultColors {
@@ -58,8 +73,8 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	}
 	w := wordclouds.NewWordcloud(
 		wordCounts,
-		wordclouds.FontMaxSize(500),
-		wordclouds.FontMinSize(50),
+		wordclouds.FontMaxSize(200),
+		wordclouds.FontMinSize(10),
 		wordclouds.FontFile("/root/mockbot/MiSans-Medium.ttf"),
 		wordclouds.Height(1024),
 		wordclouds.Width(1024),

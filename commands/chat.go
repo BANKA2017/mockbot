@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"log"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,8 +21,7 @@ func Get(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content 
 	} else {
 		text = "还没有设定 `" + content + "` ，将使用默认值"
 	}
-	res, err := share.SendMessage(bot_info, chat_id, text, map[string]any{"disable_notification": "true"})
-	log.Println(res)
+	_, err := share.SendMessage(bot_info, chat_id, text, map[string]any{"disable_notification": "true"})
 	return err
 }
 
@@ -72,36 +70,40 @@ func Set(bot_info share.BotSettingsType, chat_id int64, content string) error {
 	return fmt.Errorf("Invalid command")
 }
 
-func GetAll(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content string) error {
+func ChatSettings(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content string) error {
 
-	inlineKeyboard := [][]any{}
+	inlineKeyboard := [][]share.TgInlineKeyboard{}
 	count := 0
 
-	for key, value := range share.BotChatSettings[strconv.Itoa(int(chat_id))] {
-		if key == "chat_id" {
-			continue
+	for key, value := range share.BotChatSettingTemplate {
+		if _, ok := share.BotChatSettings[strconv.Itoa(int(chat_id))]; ok {
+			if v, ok := share.BotChatSettings[strconv.Itoa(int(chat_id))][key]; ok {
+				value = v
+			}
 		}
 		if count%2 == 0 {
-			inlineKeyboard = append(inlineKeyboard, []any{})
+			inlineKeyboard = append(inlineKeyboard, []share.TgInlineKeyboard{})
 		}
 
 		inlineKeyboard[count/2] = append(inlineKeyboard[count/2],
-			map[string]any{
-				"text":          fmt.Sprintf("%s: %s", key, share.BotSettingEnabledTemplate[value]),
-				"callback_data": fmt.Sprintf("%s:%s:%s", "chat", key, share.BotSwapValueMap[value]),
+			share.TgInlineKeyboard{
+				Text:         fmt.Sprintf("%s %s", share.BotSettingEnabledTemplate[value], key),
+				CallbackData: fmt.Sprintf("%s:%s:%s", "chat", key, share.BotSwapValueMap[value]),
 			},
 		)
 
 		count++
 	}
 
-	res, err := share.SendMessage(bot_info, chat_id, "⚙️ Chat settings", map[string]any{
+	//log.Println(inlineKeyboard)
+
+	_, err := share.SendMessage(bot_info, chat_id, "⚙️ Chat settings", map[string]any{
 		"disable_notification": "true",
-		"reply_markup": map[string]any{
-			"inline_keyboard": inlineKeyboard,
+		"reply_markup": share.TgInlineKeyboardMarkup{
+			InlineKeyboard: inlineKeyboard,
 		},
 	})
 
-	log.Println(res, err)
+	//log.Println(res, err)
 	return err
 }

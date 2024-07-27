@@ -54,8 +54,8 @@ func main() {
 
 	// just for local test
 	if share.TestMode {
-		getUpdateTicker := time.NewTicker(time.Second * 2)
 		go func() {
+			getUpdateTicker := time.NewTicker(time.Second * 5)
 			for {
 				select {
 				case <-getUpdateTicker.C:
@@ -88,16 +88,16 @@ func main() {
 		select {
 		case <-updateNowTicker.C:
 			share.UpdateNow()
-			//for _, botInfo := range share.BotSettings {
-			//	bot.AutoDelete(botInfo)
-			//}
+			for _, botInfo := range share.BotSettings {
+				bot.AutoDelete(botInfo)
+			}
 		case sendData := <-share.SendChan:
 			go func(sendData share.SendChanType) {
 				strReq, _ := share.JsonEncode(sendData.Req)
 				strRes, _ := share.JsonEncode(sendData.Res)
 
 				autoDelete := 0
-				if value, ok := share.BotSettings[sendData.BotInfo["bot_id"]]["auto_delete_seconds"]; ok && value != "0" && value != "" && sendData.BotInfo["runtime_tmp_variable_ignore_auto_delete"] != "1" {
+				if value, ok := share.BotSettings[sendData.BotInfo["bot_id"]]["auto_delete"]; ok && value != "0" && value != "" && sendData.BotInfo["runtime_tmp_variable_ignore_auto_delete"] != "1" {
 					autoDelete = 1
 				}
 

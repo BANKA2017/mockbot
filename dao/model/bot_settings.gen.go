@@ -8,8 +8,8 @@ const TableNameBotSetting = "bot_settings"
 
 // BotSetting mapped from table <bot_settings>
 type BotSetting struct {
-	BotID string `gorm:"column:bot_id" json:"bot_id"`
-	Key   string `gorm:"column:key" json:"key"`
+	BotID string `gorm:"column:bot_id;primaryKey" json:"bot_id"`
+	Key   string `gorm:"column:key;primaryKey" json:"key"`
 	Value string `gorm:"column:value" json:"value"`
 }
 
