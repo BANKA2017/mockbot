@@ -18,16 +18,6 @@ var client = VariablePtrWrapper(http.Client{
 	Transport: http.DefaultTransport,
 })
 
-// from chatgpt
-func RemoveLeadingZeros(data []byte) []byte {
-	for i := 0; i < len(data); i++ {
-		if data[i] != 0 {
-			return data[i:]
-		}
-	}
-	return []byte{0}
-}
-
 type MultipartBodyBinaryFileType struct {
 	Name     string
 	Filename string
@@ -47,9 +37,6 @@ func MultipartBodyBuilder(_body map[string]any, files ...MultipartBodyBinaryFile
 		if err != nil {
 			return nil, "", err
 		}
-		//pbBytesLen := make([]byte, 8)
-		//binary.BigEndian.PutUint64(pbBytesLen, uint64(len(data)))
-		//part.Write(RemoveLeadingZeros(pbBytesLen))
 		part.Write(_file.Binary)
 	}
 

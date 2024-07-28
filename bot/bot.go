@@ -26,7 +26,7 @@ var CommandSettings = map[string]CommandListItem{
 	"/get":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
 	"/set":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
 	"/chat_settings": {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
-	"/wc":            {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
+	"/rank":          {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
 	"/system_set":    {Level: []string{"staff"}, ChatType: []string{"private"}},
 	"/system_get":    {Level: []string{"staff"}, ChatType: []string{"private"}},
 	"/bot_settings":  {Level: []string{"staff"}, ChatType: []string{"private"}},
@@ -251,7 +251,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 					err = command.ChatSettings(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
 				case "/set":
 					err = command.Set(bot_info, content.Message.Chat.ID, realContent)
-				case "/wc":
+				case "/rank":
 					err = command.WordCloud(bot_info, content.Message.Chat.ID)
 				case "/system_set":
 					err = command.SetSystem(bot_info, content.Message.Chat.ID, realContent)
