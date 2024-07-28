@@ -38,7 +38,7 @@ func AutoDelete(bot_info share.BotSettingsType) error {
 		/// }
 	}
 
-	share.GormDB.R.Model(&model.Message{}).Where("auto_delete = 1 AND date < ?", share.Now.Unix()-int64(autoDeleteSeconds)).Find(messagesToDelete)
+	share.GormDB.R.Model(&model.Message{}).Where("bot_id = ? AND auto_delete = 1 AND date < ?", bot_info["bot_id"], share.Now.Unix()-int64(autoDeleteSeconds)).Find(messagesToDelete)
 
 	if len(*messagesToDelete) == 0 {
 		return nil

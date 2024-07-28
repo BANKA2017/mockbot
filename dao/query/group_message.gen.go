@@ -29,8 +29,10 @@ func newGroupMessage(db *gorm.DB, opts ...gen.DOOption) groupMessage {
 	_groupMessage.ALL = field.NewAsterisk(tableName)
 	_groupMessage.MessageID = field.NewString(tableName, "message_id")
 	_groupMessage.ChatID = field.NewString(tableName, "chat_id")
+	_groupMessage.UserID = field.NewString(tableName, "user_id")
+	_groupMessage.FullName = field.NewString(tableName, "full_name")
 	_groupMessage.Date = field.NewInt32(tableName, "date")
-	_groupMessage.Content = field.NewString(tableName, "content")
+	_groupMessage.Text = field.NewString(tableName, "text")
 	_groupMessage.RawContent = field.NewString(tableName, "raw_content")
 
 	_groupMessage.fillFieldMap()
@@ -44,8 +46,10 @@ type groupMessage struct {
 	ALL        field.Asterisk
 	MessageID  field.String
 	ChatID     field.String
+	UserID     field.String
+	FullName   field.String
 	Date       field.Int32
-	Content    field.String
+	Text       field.String
 	RawContent field.String
 
 	fieldMap map[string]field.Expr
@@ -65,8 +69,10 @@ func (g *groupMessage) updateTableName(table string) *groupMessage {
 	g.ALL = field.NewAsterisk(table)
 	g.MessageID = field.NewString(table, "message_id")
 	g.ChatID = field.NewString(table, "chat_id")
+	g.UserID = field.NewString(table, "user_id")
+	g.FullName = field.NewString(table, "full_name")
 	g.Date = field.NewInt32(table, "date")
-	g.Content = field.NewString(table, "content")
+	g.Text = field.NewString(table, "text")
 	g.RawContent = field.NewString(table, "raw_content")
 
 	g.fillFieldMap()
@@ -96,11 +102,13 @@ func (g *groupMessage) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (g *groupMessage) fillFieldMap() {
-	g.fieldMap = make(map[string]field.Expr, 5)
+	g.fieldMap = make(map[string]field.Expr, 7)
 	g.fieldMap["message_id"] = g.MessageID
 	g.fieldMap["chat_id"] = g.ChatID
+	g.fieldMap["user_id"] = g.UserID
+	g.fieldMap["full_name"] = g.FullName
 	g.fieldMap["date"] = g.Date
-	g.fieldMap["content"] = g.Content
+	g.fieldMap["text"] = g.Text
 	g.fieldMap["raw_content"] = g.RawContent
 }
 

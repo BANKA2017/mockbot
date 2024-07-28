@@ -8,10 +8,12 @@ const TableNameGroupMessage = "group_message"
 
 // GroupMessage mapped from table <group_message>
 type GroupMessage struct {
-	MessageID  string `gorm:"column:message_id" json:"message_id"`
-	ChatID     string `gorm:"column:chat_id" json:"chat_id"`
+	MessageID  string `gorm:"column:message_id;primaryKey" json:"message_id"`
+	ChatID     string `gorm:"column:chat_id;primaryKey" json:"chat_id"`
+	UserID     string `gorm:"column:user_id" json:"user_id"`
+	FullName   string `gorm:"column:full_name" json:"full_name"`
 	Date       int32  `gorm:"column:date" json:"date"`
-	Content    string `gorm:"column:content" json:"content"`
+	Text       string `gorm:"column:text" json:"text"`
 	RawContent string `gorm:"column:raw_content" json:"raw_content"`
 }
 

@@ -49,6 +49,22 @@ func isMeow(text string) bool {
 	return strings.HasPrefix(text, "喵一个") || strings.HasSuffix(text, "喵一个") || text == "喵"
 }
 
+func isAdmin(bot_info share.BotSettingsType, chat_id int64, user_id int64) bool {
+	res, err := share.GetChatAdministrators(bot_info, chat_id)
+	if err != nil || !res.Ok {
+		return false
+	}
+
+	for _, v := range res.Result {
+		if v.User.ID == int(user_id) {
+			if slices.Contains([]string{"administrator", "creator"}, v.Status) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotRequest) (int64, error) {
 	// precheck?
 	// chat type
@@ -63,22 +79,25 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	// precheck
 	isAtBot := false
 	isPrivate := content.Message.Chat.Type == "private"
+	isGroup := content.Message.Chat.Type == "group" || content.Message.Chat.Type == "supergroup"
 	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
 	isFromBot := content.Message.From.IsBot
 	isCallback := content.CallbackQuery.ID != ""
-	isForward := content.Message.ForwardFromMessageID != 0
-	isCommandOnlyMessage := len(content.Message.Entities) == 1 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Length == len(content.Message.Text)
+	// isForward := content.Message.ForwardFromMessageID != 0
+	// isCommandOnlyMessage := len(content.Message.Entities) == 1 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Length == len(content.Message.Text)
 
 	// enabled the word cloud?
 	/// TODO word cloud filter // bot content, raw entity, callback, not forward etc.
 	/// TODO save isCommandOnlyMessage for auto deleting
-	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && !isForward && !isCommandOnlyMessage && share.BoolBotSetting(value) {
+	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && isGroup && share.BoolBotSetting(value) {
 		rawJSONContent, _ := share.JsonEncode(content)
 		share.GormDB.W.Create(&model.GroupMessage{
 			MessageID:  strconv.Itoa(int(content.Message.MessageID)),
 			ChatID:     strconv.Itoa(int(content.Message.Chat.ID)),
+			UserID:     strconv.Itoa(content.Message.From.ID),
+			FullName:   strings.TrimSpace(fmt.Sprintf("%s %s", content.Message.From.FirstName, content.Message.From.LastName)),
 			Date:       int32(content.Message.Date),
-			Content:    content.Message.Text,
+			Text:       content.Message.Text,
 			RawContent: string(rawJSONContent),
 		})
 	}
@@ -98,17 +117,13 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 		switch data[0] {
 		case "chat":
-			res, err := share.GetChatMember(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID))
-			if err != nil {
-				return 500, fmt.Errorf("Unable to get sender status")
-			}
-			if !res.Ok || !slices.Contains([]string{"administrator", "creator"}, res.Result.Status) {
+			if !isAdmin(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID)) {
 				return 403, fmt.Errorf("Not the administrator")
 			}
 		case "bot":
 			// staff only
 			staffInfo := new(model.Staff)
-			err := share.GormDB.R.Model(&model.Staff{}).Where("id = ?", content.CallbackQuery.From.ID).First(staffInfo).Error
+			err := share.GormDB.R.Model(&model.Staff{}).Where("user_id = ? AND bot_id = ?", content.CallbackQuery.From.ID, bot_id).First(staffInfo).Error
 			if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 				return 403, fmt.Errorf("Not the staff")
 			} else if err != nil {
@@ -181,6 +196,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 		}
 
 	} else {
+		// TODO fix /a will not reply?
 		if len(content.Message.Entities) > 0 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Type == "bot_command" {
 			realCommand = strings.Split(content.Message.Text[content.Message.Entities[0].Offset:content.Message.Entities[0].Offset+content.Message.Entities[0].Length], "@")[0]
 			realContent = strings.TrimSpace(content.Message.Text[content.Message.Entities[0].Offset+content.Message.Entities[0].Length:])
@@ -206,7 +222,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 					return 400, fmt.Errorf("Command type is not allowed")
 				}
 				staffInfo := new(model.Staff)
-				err := share.GormDB.R.Model(&model.Staff{}).Where("id = ?", content.Message.From.ID).First(staffInfo).Error
+				err := share.GormDB.R.Model(&model.Staff{}).Where("user_id = ? AND bot_id = ?", content.Message.From.ID, bot_id).First(staffInfo).Error
 				if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 					return 403, fmt.Errorf("Not the staff")
 				} else if err != nil {
@@ -217,11 +233,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 				if !isOriginalBotCommand {
 					return 400, fmt.Errorf("Command type is not allowed")
 				}
-				res, err := share.GetChatMember(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID))
-				if err != nil {
-					return 500, fmt.Errorf("Unable to get sender status")
-				}
-				if !res.Ok || !slices.Contains([]string{"administrator", "creator"}, res.Result.Status) {
+				if !isAdmin(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID)) {
 					return 403, fmt.Errorf("Not the administrator")
 				}
 			}

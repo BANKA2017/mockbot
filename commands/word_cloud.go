@@ -6,6 +6,8 @@ import (
 	"image/color"
 	"image/png"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/BANKA2017/mockbot/dao/model"
@@ -15,17 +17,30 @@ import (
 
 func WordCloud(bot_info map[string]string, chat_id int64) error {
 	// latest 24 hours
-	dateOffset := share.Now.Unix() - 60*60*24
+	now := share.Now
+	dateOffset := now.Unix() - 60*60*24
 
 	messages := new([]model.GroupMessage)
 	share.GormDB.R.Model(&model.GroupMessage{}).Where("chat_id = ? AND date >= ?", chat_id, dateOffset).Find(messages)
 
 	//log.Println(messages)
 
+	messageTotal := 0
+	userTotal := 0
+	userData := make(map[string]int64)
+	userNameKV := make(map[string]string)
+
 	textArray := []string{}
 
 	for _, v := range *messages {
-		textArray = append(textArray, v.Content)
+		if _, ok := userData[v.UserID]; !ok {
+			userData[v.UserID] = 0
+			userTotal++
+		}
+		messageTotal++
+		userData[v.UserID]++
+		userNameKV[v.UserID] = v.FullName
+		textArray = append(textArray, v.Text)
 	}
 	words := share.JiebaPtr.Tag(strings.Join(textArray, "\n"))
 
@@ -71,8 +86,8 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	}
 	w := wordclouds.NewWordcloud(
 		wordCounts,
-		wordclouds.FontMaxSize(200),
-		wordclouds.FontMinSize(10),
+		wordclouds.FontMaxSize(300),
+		wordclouds.FontMinSize(20),
 		wordclouds.FontFile("/root/mockbot/MiSans-Medium.ttf"),
 		wordclouds.Height(1024),
 		wordclouds.Width(1024),
@@ -82,24 +97,54 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	buf := new(bytes.Buffer)
 	// Encode takes a writer interface and an image interface
 	// We pass it the File and the RGBA
-	png.Encode(buf, w.Draw())
+	err := png.Encode(buf, w.Draw())
 
-	share.SaveTo("/root/mockbot/commands/aaa.png", buf.Bytes())
+	if err != nil {
+		return err
+	}
 
-	//	wordCloudContentTemplate := `☁️ 07-27 热门话题 #WordCloud
-	//⏰ 截至今天 22:03
-	//🗣️ 本群 20 位朋友共产生 200 条发言
-	//🔍 看下有没有你感兴趣的关键词？
-	//
-	//活跃用户排行榜：
-	//
-	//    🥇111 贡献: 11
-	//    🥈222 贡献: 22
-	//    🥉333 贡献: 33
-	//    🎖444 贡献: 44
-	//    🎖555 贡献: 55
-	//
-	//🎉感谢这些朋友今天的分享!🎉`
+	type UserKV struct {
+		Name  string
+		Count int64
+	}
+	var userRank []UserKV
+	for k, v := range userData {
+		userRank = append(userRank, UserKV{
+			Name:  userNameKV[k],
+			Count: v,
+		})
+	}
+	sort.Slice(userRank, func(i, j int) bool {
+		return userRank[i].Count > userRank[j].Count
+	})
 
-	return nil
+	rankList := ""
+	for i, user := range userRank {
+		if i >= 5 {
+			break
+		}
+		switch i {
+		case 0:
+			rankList += "🥇"
+		case 1:
+			rankList += "🥈"
+		case 2:
+			rankList += "🥉"
+		default:
+			rankList += "🎖"
+		}
+		rankList += fmt.Sprintf("`%s` 贡献: %d\n", user.Name, user.Count)
+	}
+
+	wordCloudContentTemplate := fmt.Sprintf("☁️ %s 热门话题 \\#WordCloud\n⏰ 截至今天 %s\n🗣️ 本群 %d 位朋友共产生 %d 条发言\n🔍 看下有没有你感兴趣的关键词？\n\n活跃用户排行榜：\n\n%s\n🎉感谢这些朋友今天的分享\\!🎉", now.Format("01-02"), now.Format("15:04"), userTotal, messageTotal, rankList)
+
+	_, err = share.SendPhoto(bot_info, strconv.Itoa(int(chat_id)), buf.Bytes(), map[string]any{
+		"caption":              strings.ReplaceAll(wordCloudContentTemplate, "-", "\\-"),
+		"parse_mode":           "MarkdownV2",
+		"disable_notification": "true",
+	})
+
+	// share.SaveTo("/root/mockbot/commands/aaa.png", buf.Bytes())
+
+	return err
 }

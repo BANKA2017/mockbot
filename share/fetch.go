@@ -5,13 +5,60 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
-var client = new(http.Client)
+var client = VariablePtrWrapper(http.Client{
+	Timeout:   time.Second * time.Duration(30),
+	Transport: http.DefaultTransport,
+})
+
+// from chatgpt
+func RemoveLeadingZeros(data []byte) []byte {
+	for i := 0; i < len(data); i++ {
+		if data[i] != 0 {
+			return data[i:]
+		}
+	}
+	return []byte{0}
+}
+
+type MultipartBodyBinaryFileType struct {
+	Name     string
+	Filename string
+	Binary   []byte
+}
+
+func MultipartBodyBuilder(_body map[string]any, files ...MultipartBodyBinaryFileType) ([]byte, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for k, v := range _body {
+		part, _ := writer.CreateFormField(k)
+		part.Write([]byte(v.(string)))
+	}
+
+	for _, _file := range files {
+		part, err := writer.CreateFormFile(_file.Name, _file.Filename)
+		if err != nil {
+			return nil, "", err
+		}
+		//pbBytesLen := make([]byte, 8)
+		//binary.BigEndian.PutUint64(pbBytesLen, uint64(len(data)))
+		//part.Write(RemoveLeadingZeros(pbBytesLen))
+		part.Write(_file.Binary)
+	}
+
+	err := writer.Close()
+	if err != nil {
+		return nil, "", err
+	}
+	return body.Bytes(), writer.FormDataContentType(), nil
+}
 
 func Fetch(_url string, _method string, _body []byte, _headers map[string]string) ([]byte, error) {
 	var body io.Reader
@@ -114,11 +161,11 @@ func GetUpdates(bot_info BotSettingsType, offset string, timeout int) (*GetUpdat
 	return resp, nil
 }
 
-type GetChatMemberType struct {
+type GetChatAdministratorsType struct {
 	Ok          bool   `json:"ok,omitempty"`
 	ErrorCode   int    `json:"error_code,omitempty"`
 	Description string `json:"description,omitempty"`
-	Result      struct {
+	Result      []struct {
 		User                TgUser `json:"user,omitempty"`
 		Status              string `json:"status,omitempty"`
 		CanBeEdited         bool   `json:"can_be_edited,omitempty"`
@@ -140,13 +187,13 @@ type GetChatMemberType struct {
 	} `json:"result,omitempty"`
 }
 
-func GetChatMember(bot_info BotSettingsType, chat_id int64, user_id int64) (*GetChatMemberType, error) {
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getChatMember", bot_info["token"]), "POST", []byte(fmt.Sprintf("chat_id=%v&user_id=%v", chat_id, user_id)), map[string]string{})
+func GetChatAdministrators(bot_info BotSettingsType, chat_id int64) (*GetChatAdministratorsType, error) {
+	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getChatAdministrators", bot_info["token"]), "POST", []byte(fmt.Sprintf("chat_id=%d", chat_id)), map[string]string{})
 	if err != nil {
 		return nil, err
 	}
 
-	resp := new(GetChatMemberType)
+	resp := new(GetChatAdministratorsType)
 	err = JsonDecode(res, resp)
 	if err != nil {
 		return nil, err
@@ -262,6 +309,67 @@ func EditMessageText(bot_info BotSettingsType, chat_id string, message_id string
 	}
 
 	resp := new(EditMessageTextType)
+	err = JsonDecode(res, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// T string, []byte
+
+type SendPhotoType struct {
+	Ok          bool   `json:"ok,omitempty"`
+	ErrorCode   int    `json:"error_code,omitempty"`
+	Description string `json:"description,omitempty"`
+	Result      struct {
+		MessageID int    `json:"message_id,omitempty"`
+		From      TgUser `json:"from,omitempty"`
+		Chat      TgChat `json:"chat,omitempty"`
+		Date      int    `json:"date,omitempty"`
+		Photo     []struct {
+			FileID       string `json:"file_id,omitempty"`
+			FileUniqueID string `json:"file_unique_id,omitempty"`
+			FileSize     int    `json:"file_size,omitempty"`
+			Width        int    `json:"width,omitempty"`
+			Height       int    `json:"height,omitempty"`
+		} `json:"photo,omitempty"`
+	} `json:"result,omitempty"`
+}
+
+func SendPhoto[T any](bot_info BotSettingsType, chat_id string, photo T, ext map[string]any) (*SendPhotoType, error) {
+	var _body []byte
+	var err error
+	var contentType = "application/json"
+
+	ext["chat_id"] = chat_id
+	if _, ok := any(photo).(string); ok {
+		ext["photo"] = photo
+		_body, err = JsonEncode(ext)
+
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_body, contentType, err = MultipartBodyBuilder(ext, MultipartBodyBinaryFileType{
+			Name:     "photo",
+			Filename: fmt.Sprintf("%d.png", Now.UnixMilli()),
+			Binary:   any(photo).([]byte),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/sendPhoto", bot_info["token"]), "POST", _body, map[string]string{
+		"Content-Type": contentType,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp := new(SendPhotoType)
 	err = JsonDecode(res, resp)
 	if err != nil {
 		return nil, err

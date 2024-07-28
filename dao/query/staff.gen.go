@@ -27,7 +27,7 @@ func newStaff(db *gorm.DB, opts ...gen.DOOption) staff {
 
 	tableName := _staff.staffDo.TableName()
 	_staff.ALL = field.NewAsterisk(tableName)
-	_staff.ID = field.NewInt32(tableName, "id")
+	_staff.UserID = field.NewInt32(tableName, "user_id")
 	_staff.Role = field.NewString(tableName, "role")
 	_staff.BotID = field.NewInt32(tableName, "bot_id")
 
@@ -39,10 +39,10 @@ func newStaff(db *gorm.DB, opts ...gen.DOOption) staff {
 type staff struct {
 	staffDo staffDo
 
-	ALL   field.Asterisk
-	ID    field.Int32
-	Role  field.String
-	BotID field.Int32
+	ALL    field.Asterisk
+	UserID field.Int32
+	Role   field.String
+	BotID  field.Int32
 
 	fieldMap map[string]field.Expr
 }
@@ -59,7 +59,7 @@ func (s staff) As(alias string) *staff {
 
 func (s *staff) updateTableName(table string) *staff {
 	s.ALL = field.NewAsterisk(table)
-	s.ID = field.NewInt32(table, "id")
+	s.UserID = field.NewInt32(table, "user_id")
 	s.Role = field.NewString(table, "role")
 	s.BotID = field.NewInt32(table, "bot_id")
 
@@ -87,7 +87,7 @@ func (s *staff) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 
 func (s *staff) fillFieldMap() {
 	s.fieldMap = make(map[string]field.Expr, 3)
-	s.fieldMap["id"] = s.ID
+	s.fieldMap["user_id"] = s.UserID
 	s.fieldMap["role"] = s.Role
 	s.fieldMap["bot_id"] = s.BotID
 }

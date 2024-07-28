@@ -53,38 +53,38 @@ func main() {
 	bot.InitCommandList()
 
 	// just for local test
-	if share.TestMode {
-		go func() {
-			// TOOD dynamic add bot
-			for botID := range share.BotSettings {
-				go func(botID string) {
-					for {
-						botSettings, ok := share.BotSettings[botID]
-						if !ok {
-							log.Println("ERROR: BotID", botID, "not exists")
-							return
-						}
-						res, err := share.GetUpdates(botSettings, strconv.Itoa(share.BotOffset[botID]+1), 30)
-						if err != nil {
-							log.Println("ERROR:", err)
-							return
-						}
-						// log.Println(res)
-						if !res.Ok {
-							log.Println("ERROR:", res.ErrorCode, res.Description)
-							return
-						}
-						if len(res.Result) > 0 {
-							share.BotOffset[botID] = res.Result[len(res.Result)-1].UpdateID
-							for _, content := range res.Result {
-								bot.Bot(botID, botSettings, &content)
-							}
+	//if share.TestMode {
+	go func() {
+		// TOOD dynamic add bot
+		for botID := range share.BotSettings {
+			go func(botID string) {
+				for {
+					botSettings, ok := share.BotSettings[botID]
+					if !ok {
+						log.Println("ERROR: BotID", botID, "not exists")
+						return
+					}
+					res, err := share.GetUpdates(botSettings, strconv.Itoa(share.BotOffset[botID]+1), 30)
+					if err != nil {
+						log.Println("ERROR:", err)
+						return
+					}
+					// log.Println(res)
+					if !res.Ok {
+						log.Println("ERROR:", res.ErrorCode, res.Description)
+						return
+					}
+					if len(res.Result) > 0 {
+						share.BotOffset[botID] = res.Result[len(res.Result)-1].UpdateID
+						for _, content := range res.Result {
+							bot.Bot(botID, botSettings, &content)
 						}
 					}
-				}(botID)
-			}
-		}()
-	}
+				}
+			}(botID)
+		}
+	}()
+	//}
 
 	// init system
 	share.UpdateNow()
