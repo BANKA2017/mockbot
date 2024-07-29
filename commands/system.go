@@ -6,11 +6,13 @@ import (
 	"github.com/BANKA2017/mockbot/share"
 )
 
-func GetSystem(bot_info share.BotSettingsType, chat_id int64, content string) error {
+func GetSystem(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	//chat_id := bot_request.Message.Chat.ID
 	return nil
 }
 
-func SetSystem(bot_info share.BotSettingsType, chat_id int64, content string) error {
+func SetSystem(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	//chat_id := bot_request.Message.Chat.ID
 	return nil
 }
 
@@ -22,7 +24,8 @@ func DelStaff(bot_info share.BotSettingsType, chat_id int64, user_id int64) erro
 	return nil
 }
 
-func BotSettings(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content string) error {
+func BotSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
 
 	inlineKeyboard := [][]share.TgInlineKeyboard{}
 	count := 0

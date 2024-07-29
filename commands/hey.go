@@ -10,7 +10,10 @@ import (
 	"gorm.io/gorm"
 )
 
-func Hey(bot_info share.BotSettingsType, chat_id int64, user_id int64, bot_request *share.BotRequest) error {
+func Hey(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
+	user_id := bot_request.Message.From.ID
+
 	// find last checkin
 	checkinStatus := new(model.Checkin)
 	err := share.GormDB.R.Model(&model.Checkin{}).Where("user_id = ?", user_id).Order("date DESC").First(checkinStatus).Error

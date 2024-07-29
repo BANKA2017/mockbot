@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -12,24 +11,24 @@ import (
 	command "github.com/BANKA2017/mockbot/commands"
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
-	"gorm.io/gorm"
 )
 
 type CommandListItem struct {
 	Level    []string // staff, administrator, user
 	ChatType []string // private, group, supergroup, channel
+	Callback func(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error
 }
 
 var CommandSettings = map[string]CommandListItem{
-	"/hey":           {Level: []string{}, ChatType: []string{"private", "group", "supergroup"}},
-	"/me":            {Level: []string{}, ChatType: []string{"private", "group", "supergroup"}},
-	"/get":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
-	"/set":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
-	"/chat_settings": {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
-	"/rank":          {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}},
-	"/system_set":    {Level: []string{"staff"}, ChatType: []string{"private"}},
-	"/system_get":    {Level: []string{"staff"}, ChatType: []string{"private"}},
-	"/bot_settings":  {Level: []string{"staff"}, ChatType: []string{"private"}},
+	"/hey":           {Level: []string{}, ChatType: []string{"private", "group", "supergroup"}, Callback: command.Hey},
+	"/me":            {Level: []string{}, ChatType: []string{"private", "group", "supergroup"}, Callback: command.Me},
+	"/get":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}, Callback: command.Get},
+	"/set":           {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}, Callback: command.ChatSettings},
+	"/chat_settings": {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}, Callback: command.Set},
+	"/rank":          {Level: []string{"administrator"}, ChatType: []string{"group", "supergroup"}, Callback: command.WordCloud},
+	"/system_set":    {Level: []string{"staff"}, ChatType: []string{"private"}, Callback: command.SetSystem},
+	"/system_get":    {Level: []string{"staff"}, ChatType: []string{"private"}, Callback: command.GetSystem},
+	"/bot_settings":  {Level: []string{"staff"}, ChatType: []string{"private"}, Callback: command.BotSettings},
 }
 
 var CommandList = []string{}
@@ -49,7 +48,14 @@ func isMeow(text string) bool {
 	return strings.HasPrefix(text, "喵一个") || strings.HasSuffix(text, "喵一个") || text == "喵"
 }
 
-func isAdmin(bot_info share.BotSettingsType, chat_id int64, user_id int64) bool {
+// Role
+func IsStaff(bot_info share.BotSettingsType, user_id int64) bool {
+	staffInfo := new(model.Staff)
+	err := share.GormDB.R.Model(&model.Staff{}).Where("user_id = ? AND bot_id = ?", user_id, bot_info["bot_id"]).First(staffInfo).Error
+	return err == nil
+}
+
+func IsAdmin(bot_info share.BotSettingsType, chat_id int64, user_id int64) bool {
 	res, err := share.GetChatAdministrators(bot_info, chat_id)
 	if err != nil || !res.Ok {
 		return false
@@ -81,7 +87,6 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	isPrivate := content.Message.Chat.Type == "private"
 	isGroup := content.Message.Chat.Type == "group" || content.Message.Chat.Type == "supergroup"
 	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
-	isFromBot := content.Message.From.IsBot
 	isCallback := content.CallbackQuery.ID != ""
 
 	text := content.Message.Text
@@ -99,7 +104,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	// enabled the word cloud?
 	/// TODO word cloud filter // bot content, raw entity, callback, not forward etc.
 	/// TODO save isCommandOnlyMessage for auto deleting
-	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isFromBot && !isCallback && isGroup && share.BoolBotSetting(value) {
+	if value := share.GetBotSettings("chat", strconv.Itoa(int(content.Message.Chat.ID)), "enable_word_cloud"); !isCallback && isGroup && share.BoolBotSetting(value) {
 		rawJSONContent, _ := share.JsonEncode(content)
 		share.GormDB.W.Create(&model.GroupMessage{
 			MessageID:  strconv.Itoa(int(content.Message.MessageID)),
@@ -127,17 +132,13 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 		switch data[0] {
 		case "chat":
-			if !isAdmin(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID)) {
+			if !IsAdmin(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID)) {
 				return 403, fmt.Errorf("Not the administrator")
 			}
 		case "bot":
 			// staff only
-			staffInfo := new(model.Staff)
-			err := share.GormDB.R.Model(&model.Staff{}).Where("user_id = ? AND bot_id = ?", content.CallbackQuery.From.ID, bot_id).First(staffInfo).Error
-			if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+			if !IsStaff(bot_info, int64(content.Message.From.ID)) {
 				return 403, fmt.Errorf("Not the staff")
-			} else if err != nil {
-				return 500, fmt.Errorf("Unable to get staff status")
 			}
 		}
 
@@ -206,11 +207,10 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 		}
 
 	} else {
-		// TODO fix /a will not reply?
 		if len(entities) > 0 && entities[0].Offset == 0 && entities[0].Type == "bot_command" {
 			realCommand = strings.Split(text[entities[0].Offset:entities[0].Offset+entities[0].Length], "@")[0]
 			realContent = strings.TrimSpace(text[entities[0].Offset+entities[0].Length:])
-			if slices.Contains(CommandList, realCommand) {
+			if _, ok := CommandSettings[realCommand]; ok {
 				isOriginalBotCommand = true
 			}
 		}
@@ -226,50 +226,16 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 			}
 
 			// role
-			if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "staff") {
+			if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "staff") && !IsStaff(bot_info, int64(content.Message.From.ID)) {
 				// staff only
-				if !isOriginalBotCommand {
-					return 400, fmt.Errorf("Command type is not allowed")
-				}
-				staffInfo := new(model.Staff)
-				err := share.GormDB.R.Model(&model.Staff{}).Where("user_id = ? AND bot_id = ?", content.Message.From.ID, bot_id).First(staffInfo).Error
-				if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-					return 403, fmt.Errorf("Not the staff")
-				} else if err != nil {
-					return 500, fmt.Errorf("Unable to get staff status")
-				}
-			} else if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "administrator") {
+				return 403, fmt.Errorf("Not the staff")
+			} else if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "administrator") && !IsAdmin(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID)) {
 				// group administrator only
-				if !isOriginalBotCommand {
-					return 400, fmt.Errorf("Command type is not allowed")
-				}
-				if !isAdmin(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID)) {
-					return 403, fmt.Errorf("Not the administrator")
-				}
+				return 403, fmt.Errorf("Not the administrator")
 			}
 
-			if slices.Contains(CommandList, realCommand) {
-				var err error
-				switch realCommand {
-				case "/hey":
-					err = command.Hey(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), content)
-				case "/me":
-					err = command.Me(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), content)
-				case "/get":
-					err = command.Get(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
-				case "/chat_settings":
-					err = command.ChatSettings(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
-				case "/set":
-					err = command.Set(bot_info, content.Message.Chat.ID, realContent)
-				case "/rank":
-					err = command.WordCloud(bot_info, content.Message.Chat.ID)
-				case "/system_set":
-					err = command.SetSystem(bot_info, content.Message.Chat.ID, realContent)
-				case "/system_get":
-					err = command.GetSystem(bot_info, content.Message.Chat.ID, realContent)
-				case "/bot_settings":
-					err = command.BotSettings(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID), realContent)
-				}
+			if command, ok := CommandSettings[realCommand]; ok {
+				err := command.Callback(bot_info, content, realContent)
 				if err != nil {
 					log.Println(err)
 					return 500, fmt.Errorf("Failed")

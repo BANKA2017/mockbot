@@ -14,7 +14,9 @@ import (
 	"github.com/psykhi/wordclouds"
 )
 
-func WordCloud(bot_info map[string]string, chat_id int64) error {
+func WordCloud(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
+
 	// latest 24 hours
 	now := share.Now
 	dateOffset := now.Unix() - 60*60*24
@@ -138,18 +140,15 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 		default:
 			rankList += "🎖"
 		}
-		rankList += fmt.Sprintf("`%s` 贡献: %d\n", user.Name, user.Count)
+		rankList += fmt.Sprintf("`%s` 贡献: %d\n", share.FixMarkdownV2(user.Name), user.Count)
 	}
 
-	wordCloudContentTemplate := fmt.Sprintf("☁️ %s 热门话题 \\#WordCloud\n⏰ 截至今天 %s\n🗣️ 本群 %d 位朋友共产生 %d 条发言\n🔍 看下有没有你感兴趣的关键词？\n\n活跃用户排行榜：\n\n%s\n🎉感谢这些朋友今天的分享\\!🎉", now.Format("01-02"), now.Format("15:04"), userTotal, messageTotal, rankList)
+	wordCloudContentTemplate := fmt.Sprintf("☁️ %s 热门话题 \\#WordCloud\n⏰ 截至今天 %s\n🗣️ 本群 %d 位朋友共产生 %d 条发言\n🔍 看下有没有你感兴趣的关键词？\n\n活跃用户排行榜：\n\n%s\n🎉感谢这些朋友今天的分享\\!🎉", strings.ReplaceAll(now.Format("01-02"), "-", "\\-"), now.Format("15:04"), userTotal, messageTotal, rankList)
 
 	_, err = share.SendPhoto(bot_info, strconv.Itoa(int(chat_id)), buf.Bytes(), map[string]any{
-		"caption":              strings.ReplaceAll(wordCloudContentTemplate, "-", "\\-"),
+		"caption":              wordCloudContentTemplate,
 		"parse_mode":           "MarkdownV2",
 		"disable_notification": "true",
 	})
-
-	// share.SaveTo("/root/mockbot/commands/aaa.png", buf.Bytes())
-
 	return err
 }

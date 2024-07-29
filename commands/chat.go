@@ -12,7 +12,9 @@ import (
 //TODO inline
 
 // Get chat settings
-func Get(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content string) error {
+func Get(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
+
 	content = strings.TrimSpace(content)
 
 	text := ""
@@ -25,7 +27,8 @@ func Get(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content 
 	return err
 }
 
-func Set(bot_info share.BotSettingsType, chat_id int64, content string) error {
+func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
 	strChatID := strconv.Itoa(int(chat_id))
 
 	// split content
@@ -70,7 +73,8 @@ func Set(bot_info share.BotSettingsType, chat_id int64, content string) error {
 	return fmt.Errorf("Invalid command")
 }
 
-func ChatSettings(bot_info share.BotSettingsType, chat_id int64, reply_to int64, content string) error {
+func ChatSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
+	chat_id := bot_request.Message.Chat.ID
 
 	inlineKeyboard := [][]share.TgInlineKeyboard{}
 	count := 0

@@ -64,7 +64,6 @@ func main() {
 	share.InitBotSettings()
 	share.SyncBotSettings()
 	share.InitBotChatSettings()
-	bot.InitCommandList()
 
 	// just for local test
 	//if share.TestMode {
