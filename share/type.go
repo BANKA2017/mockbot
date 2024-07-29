@@ -34,28 +34,24 @@ type TgInlineKeyboardMarkup struct {
 	InlineKeyboard [][]TgInlineKeyboard `json:"inline_keyboard,omitempty"`
 }
 
+type TgFile struct {
+	FileID       string `json:"file_id,omitempty"`
+	FileUniqueID string `json:"file_unique_id,omitempty"`
+	FileSize     int    `json:"file_size,omitempty"`
+	Width        int    `json:"width,omitempty"`
+	Height       int    `json:"height,omitempty"`
+}
+
 type TgSticker struct {
-	Width      int    `json:"width,omitempty"`
-	Height     int    `json:"height,omitempty"`
-	Emoji      string `json:"emoji,omitempty"`
-	SetName    string `json:"set_name,omitempty"`
-	IsAnimated bool   `json:"is_animated,omitempty"`
-	IsVideo    bool   `json:"is_video,omitempty"`
-	Type       string `json:"type,omitempty"`
-	Thumbnail  struct {
-		FileID       string `json:"file_id,omitempty"`
-		FileUniqueID string `json:"file_unique_id,omitempty"`
-		FileSize     int    `json:"file_size,omitempty"`
-		Width        int    `json:"width,omitempty"`
-		Height       int    `json:"height,omitempty"`
-	} `json:"thumbnail,omitempty"`
-	Thumb struct {
-		FileID       string `json:"file_id,omitempty"`
-		FileUniqueID string `json:"file_unique_id,omitempty"`
-		FileSize     int    `json:"file_size,omitempty"`
-		Width        int    `json:"width,omitempty"`
-		Height       int    `json:"height,omitempty"`
-	} `json:"thumb,omitempty"`
+	Width        int    `json:"width,omitempty"`
+	Height       int    `json:"height,omitempty"`
+	Emoji        string `json:"emoji,omitempty"`
+	SetName      string `json:"set_name,omitempty"`
+	IsAnimated   bool   `json:"is_animated,omitempty"`
+	IsVideo      bool   `json:"is_video,omitempty"`
+	Type         string `json:"type,omitempty"`
+	Thumbnail    TgFile `json:"thumbnail,omitempty"`
+	Thumb        TgFile `json:"thumb,omitempty"`
 	FileID       string `json:"file_id,omitempty"`
 	FileUniqueID string `json:"file_unique_id,omitempty"`
 	FileSize     int    `json:"file_size,omitempty"`
@@ -82,6 +78,7 @@ type TgMessage struct {
 		MessageID       int    `json:"message_id,omitempty"`
 		AuthorSignature string `json:"author_signature,omitempty"`
 		Date            int    `json:"date,omitempty"`
+		SenderUser      TgUser `json:"sender_user,omitempty"`
 	} `json:"forward_origin,omitempty"`
 	ForwardFromChat      TgChat                 `json:"forward_from_chat,omitempty"`
 	ForwardFromMessageID int                    `json:"forward_from_message_id,omitempty"`
@@ -91,6 +88,9 @@ type TgMessage struct {
 	Entities             []TgMessageEntity      `json:"entities,omitempty"`
 	ReplyMarkup          TgInlineKeyboardMarkup `json:"reply_markup,omitempty"`
 	Sticker              TgSticker              `json:"sticker,omitempty"`
+	Photo                []TgFile               `json:"photo,omitempty"`
+	Caption              string                 `json:"caption,omitempty"`
+	CaptionEntities      []TgMessageEntity      `json:"caption_entities,omitempty"`
 }
 
 type BotRequest struct {

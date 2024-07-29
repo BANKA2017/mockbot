@@ -83,8 +83,18 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
 	isFromBot := content.Message.From.IsBot
 	isCallback := content.CallbackQuery.ID != ""
+
+	text := content.Message.Text
+	if text == "" {
+		text = content.Message.Caption
+	}
+	entities := content.Message.Entities
+	if len(entities) == 0 {
+		entities = content.Message.CaptionEntities
+	}
+
 	// isForward := content.Message.ForwardFromMessageID != 0
-	// isCommandOnlyMessage := len(content.Message.Entities) == 1 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Length == len(content.Message.Text)
+	// isCommandOnlyMessage := len(entities) == 1 && entities[0].Offset == 0 && entities[0].Length == len(text)
 
 	// enabled the word cloud?
 	/// TODO word cloud filter // bot content, raw entity, callback, not forward etc.
@@ -97,7 +107,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 			UserID:     strconv.Itoa(content.Message.From.ID),
 			FullName:   strings.TrimSpace(fmt.Sprintf("%s %s", content.Message.From.FirstName, content.Message.From.LastName)),
 			Date:       int32(content.Message.Date),
-			Text:       content.Message.Text,
+			Text:       text,
 			RawContent: string(rawJSONContent),
 		})
 	}
@@ -170,8 +180,8 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	// text
 
-	for _, entity := range content.Message.Entities {
-		if entity.Type == "mention" && content.Message.Text[entity.Offset+1:entity.Offset+entity.Length] == bot_info["username"] {
+	for _, entity := range entities {
+		if entity.Type == "mention" && text[entity.Offset+1:entity.Offset+entity.Length] == bot_info["username"] {
 			isAtBot = true
 			break
 		}
@@ -180,15 +190,15 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	isOriginalBotCommand := false
 
 	realCommand := ""
-	realContent := content.Message.Text
+	realContent := text
 
 	// normal content
-	if len(content.Message.Text) <= 1 || !strings.HasPrefix(content.Message.Text, "/") {
+	if len(text) <= 1 || !strings.HasPrefix(text, "/") {
 		// at the bot or reply to the bot
 		if isPrivate || isAtBot || isReplyTheBot {
 			// meow
 			/// TODO send random neko meme
-			if isMeow(content.Message.Text) {
+			if isMeow(text) {
 				bot_info["runtime_tmp_variable_ignore_auto_delete"] = "1"
 				_, err := share.SendMessage(bot_info, content.Message.Chat.ID, "喵", map[string]any{})
 				return 200, err
@@ -197,9 +207,9 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	} else {
 		// TODO fix /a will not reply?
-		if len(content.Message.Entities) > 0 && content.Message.Entities[0].Offset == 0 && content.Message.Entities[0].Type == "bot_command" {
-			realCommand = strings.Split(content.Message.Text[content.Message.Entities[0].Offset:content.Message.Entities[0].Offset+content.Message.Entities[0].Length], "@")[0]
-			realContent = strings.TrimSpace(content.Message.Text[content.Message.Entities[0].Offset+content.Message.Entities[0].Length:])
+		if len(entities) > 0 && entities[0].Offset == 0 && entities[0].Type == "bot_command" {
+			realCommand = strings.Split(text[entities[0].Offset:entities[0].Offset+entities[0].Length], "@")[0]
+			realContent = strings.TrimSpace(text[entities[0].Offset+entities[0].Length:])
 			if slices.Contains(CommandList, realCommand) {
 				isOriginalBotCommand = true
 			}
