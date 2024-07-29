@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image/color"
 	"image/png"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,9 +46,15 @@ func WordCloud(bot_info map[string]string, chat_id int64) error {
 	wordCounts := make(map[string]int)
 
 	// /n
-	for _, word := range words {
-		if strings.HasSuffix(word, "/n") {
-			word = regexp.MustCompile(`(?m)/(n)$`).ReplaceAllString(word, "")
+	for _, _word := range words {
+		i := strings.LastIndex(_word, "/")
+		if i == -1 {
+			continue
+		}
+		word := _word[:i]
+		pos := _word[i+1:]
+
+		if strings.HasPrefix(pos, "n") || pos == "名詞" {
 			if _, ok := wordCounts[word]; !ok {
 				wordCounts[word] = 0
 			}

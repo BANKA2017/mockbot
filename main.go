@@ -11,6 +11,7 @@ import (
 	"github.com/BANKA2017/mockbot/bot"
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
+	"github.com/yanyiwu/gojieba"
 	"gorm.io/gorm/logger"
 )
 
@@ -46,6 +47,19 @@ func main() {
 		log.Fatal("DB:", err)
 	}
 
+	// init Gse
+	share.JiebaPtr = gojieba.NewJieba()
+
+	// jpDict, _ := os.ReadFile("/root/mockbot/dict.txt")
+	// arrayJpDict := strings.Split(strings.TrimSpace(string(jpDict)), "\n")
+	// for _, v := range arrayJpDict {
+	// 	w := strings.Split(v, " ")
+	// 	intPos, _ := strconv.ParseInt(w[1], 10, 64)
+	// 	share.JiebaPtr.AddWordEx(w[0], int(intPos), w[2])
+	// }
+
+	//share.Seg.LoadDictEmbed("zh_s", "zh_t")
+
 	// init bot settings
 	share.InitBotSettings()
 	share.SyncBotSettings()
@@ -57,6 +71,7 @@ func main() {
 	go func() {
 		// TOOD dynamic add bot
 		for botID := range share.BotSettings {
+			// TODO auto exit when too much errors
 			go func(botID string) {
 				for {
 					botSettings, ok := share.BotSettings[botID]
@@ -67,12 +82,10 @@ func main() {
 					res, err := share.GetUpdates(botSettings, strconv.Itoa(share.BotOffset[botID]+1), 30)
 					if err != nil {
 						log.Println("ERROR:", err)
-						return
 					}
 					// log.Println(res)
 					if !res.Ok {
 						log.Println("ERROR:", res.ErrorCode, res.Description)
-						return
 					}
 					if len(res.Result) > 0 {
 						share.BotOffset[botID] = res.Result[len(res.Result)-1].UpdateID

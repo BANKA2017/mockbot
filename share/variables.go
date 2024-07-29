@@ -6,7 +6,7 @@ var DBPath string
 var Address string
 var TestMode bool
 
-var JiebaPtr = gojieba.NewJieba()
+var JiebaPtr *gojieba.Jieba
 
 func VariableWrapper[T any](anyValue T) T {
 	return anyValue

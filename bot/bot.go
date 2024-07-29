@@ -183,7 +183,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	realContent := content.Message.Text
 
 	// normal content
-	if len(content.Message.Text) <= 2 || !strings.HasPrefix(content.Message.Text, "/") {
+	if len(content.Message.Text) <= 1 || !strings.HasPrefix(content.Message.Text, "/") {
 		// at the bot or reply to the bot
 		if isPrivate || isAtBot || isReplyTheBot {
 			// meow

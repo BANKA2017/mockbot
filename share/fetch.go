@@ -14,7 +14,7 @@ import (
 )
 
 var client = VariablePtrWrapper(http.Client{
-	Timeout:   time.Second * time.Duration(30),
+	Timeout:   time.Second * time.Duration(31),
 	Transport: http.DefaultTransport,
 })
 
