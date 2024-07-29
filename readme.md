@@ -16,3 +16,5 @@ use `MiSans-Medium.ttf`
 ## TODO
 
 - [ ] // TODO
+- [ ] i18n, Chinese simplify only now
+- [ ] ...

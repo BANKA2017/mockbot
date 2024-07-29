@@ -58,12 +58,12 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 				return err
 			}
 		} else {
-			newValue := strings.Join(kv[0:], "|")
+			newValue := strings.Join(kv[1:], "|")
 			err := share.SetBotSettings("chat", strChatID, kv[0], newValue)
 			if err != nil {
 				return err
 			}
-			_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]\\-\\> %s", kv[0], newValue), map[string]any{
+			_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]\\-\\> %s", kv[0], share.FixMarkdownV2(newValue)), map[string]any{
 				"parse_mode":           "MarkdownV2",
 				"disable_notification": "true",
 			})

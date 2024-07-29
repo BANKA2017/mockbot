@@ -16,23 +16,29 @@ func At(bot_info share.BotSettingsType, chat_id int64, bot_request *share.BotReq
 		text = bot_request.Message.Caption
 	}
 
-	realContent := strings.Fields(text[1:])
+	var realContent []string
+	for _, v := range strings.Fields(text[1:]) {
+		realContent = append(realContent, share.FixMarkdownV2(v))
+	}
 
-	// TODO fix markdown/html inject?
 	response := ""
+
+	fromFullName := share.FixMarkdownV2(fmt.Sprintf("%s %s", bot_request.Message.From.FirstName, bot_request.Message.From.LastName))
+	replyToFullName := share.FixMarkdownV2(fmt.Sprintf("%s %s", bot_request.Message.ReplyToMessage.From.FirstName, bot_request.Message.ReplyToMessage.From.LastName))
+
 	if len(realContent) == 1 {
 		if bot_request.Message.ReplyToMessage.From.ID == 0 || bot_request.Message.From.ID == bot_request.Message.ReplyToMessage.From.ID {
 			// self
-			response = fmt.Sprintf("[%s %s](tg://user?id=%d) %s了 [自己](tg://user?id=%d)", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, bot_request.Message.From.ID, realContent[0], bot_request.Message.From.ID)
+			response = fmt.Sprintf("[%s](tg://user?id=%d) %s了 [自己](tg://user?id=%d)", fromFullName, bot_request.Message.From.ID, realContent[0], bot_request.Message.From.ID)
 		} else if bot_request.Message.ReplyToMessage.From.ID != 0 {
-			response = fmt.Sprintf("[%s %s](tg://user?id=%d) %s了 [%s %s](tg://user?id=%d)", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, bot_request.Message.From.ID, realContent[0], bot_request.Message.ReplyToMessage.From.FirstName, bot_request.Message.ReplyToMessage.From.LastName, bot_request.Message.From.ID)
+			response = fmt.Sprintf("[%s](tg://user?id=%d) %s了 [%s](tg://user?id=%d)", fromFullName, bot_request.Message.From.ID, realContent[0], replyToFullName, bot_request.Message.From.ID)
 		}
 	} else {
 		if bot_request.Message.ReplyToMessage.From.ID == 0 || bot_request.Message.From.ID == bot_request.Message.ReplyToMessage.From.ID {
 			// self
-			response = fmt.Sprintf("[%s %s](tg://user?id=%d) %s [自己](tg://user?id=%d) %s", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, bot_request.Message.From.ID, realContent[0], bot_request.Message.From.ID, strings.Join(realContent[1:], ", "))
+			response = fmt.Sprintf("[%s](tg://user?id=%d) %s [自己](tg://user?id=%d) %s", fromFullName, bot_request.Message.From.ID, realContent[0], bot_request.Message.From.ID, strings.Join(realContent[1:], ", "))
 		} else if bot_request.Message.ReplyToMessage.From.ID != 0 {
-			response = fmt.Sprintf("[%s %s](tg://user?id=%d) %s [%s %s](tg://user?id=%d) %s", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, bot_request.Message.From.ID, realContent[0], bot_request.Message.ReplyToMessage.From.FirstName, bot_request.Message.ReplyToMessage.From.LastName, bot_request.Message.From.ID, strings.Join(realContent[1:], ", "))
+			response = fmt.Sprintf("[%s](tg://user?id=%d) %s [%s](tg://user?id=%d) %s", fromFullName, bot_request.Message.From.ID, realContent[0], replyToFullName, bot_request.Message.From.ID, strings.Join(realContent[1:], " "))
 		}
 	}
 
