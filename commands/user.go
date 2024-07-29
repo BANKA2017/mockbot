@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/BANKA2017/mockbot/dao/model"
 	"github.com/BANKA2017/mockbot/share"
@@ -38,6 +39,12 @@ func Me(bot_info share.BotSettingsType, bot_request *share.BotRequest, content s
 		}
 	}
 
-	_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s %s，共签到 %d 天", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, isNotYetCheckinText, total), map[string]any{"disable_notification": "true"})
+	_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s %s，共签到 %d 天", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, isNotYetCheckinText, total), map[string]any{
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
+		"reply_parameters": map[string]int{
+			"message_id": bot_request.Message.MessageID,
+			"chat_id":    int(chat_id),
+		},
+	})
 	return err
 }

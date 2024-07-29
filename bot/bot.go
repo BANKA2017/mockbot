@@ -73,6 +73,7 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	// precheck
 	isAtBot := false
+	isFuzzCommand := false
 	isCallback := content.CallbackQuery.ID != ""
 
 	isPrivate := isCallback && content.CallbackQuery.Message.Chat.Type == "private" || !isCallback && content.Message.Chat.Type == "private"
@@ -176,10 +177,17 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 				return 200, err
 			}
 		}
-
 	} else {
 		if len(entities) > 0 && entities[0].Offset == 0 && entities[0].Type == "bot_command" {
-			realCommand = strings.Split(text[entities[0].Offset:entities[0].Offset+entities[0].Length], "@")[0]
+			splitCommand := strings.Split(text[entities[0].Offset:entities[0].Offset+entities[0].Length], "@")
+			realCommand = splitCommand[0]
+
+			if len(splitCommand) == 1 {
+				isFuzzCommand = true
+			} else if len(splitCommand) > 1 {
+				isAtBot = splitCommand[1] == bot_info["username"]
+			}
+
 			realContent = strings.TrimSpace(text[entities[0].Offset+entities[0].Length:])
 			if _, ok := CommandSettings[realCommand]; ok {
 				isOriginalBotCommand = true
@@ -190,17 +198,19 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 		/// TODO hot spot
 		if !isOriginalBotCommand {
 			command.At(bot_info, content.Message.Chat.ID, content)
-		} else {
+		} else if isAtBot || isFuzzCommand {
+			commandInfo := CommandSettings[realCommand]
+
 			// chat type
-			if commandInfo := CommandSettings[realCommand]; !slices.Contains(commandInfo.ChatType, content.Message.Chat.Type) {
+			if !slices.Contains(commandInfo.ChatType, content.Message.Chat.Type) {
 				return 403, fmt.Errorf("Invalid chat type")
 			}
 
 			// role
-			if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "staff") && !IsStaff(bot_info, int64(content.Message.From.ID)) {
+			if slices.Contains(commandInfo.Level, "staff") && !IsStaff(bot_info, int64(content.Message.From.ID)) {
 				// staff only
 				return 403, fmt.Errorf("Not the staff")
-			} else if commandInfo := CommandSettings[realCommand]; slices.Contains(commandInfo.Level, "administrator") && !IsAdmin(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID)) {
+			} else if slices.Contains(commandInfo.Level, "administrator") && !IsAdmin(bot_info, content.Message.Chat.ID, int64(content.Message.From.ID)) {
 				// group administrator only
 				return 403, fmt.Errorf("Not the administrator")
 			}

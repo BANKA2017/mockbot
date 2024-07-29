@@ -17,6 +17,8 @@ import (
 func WordCloud(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
 	chat_id := bot_request.Message.Chat.ID
 
+	// TODO precheck photo permission?
+
 	// latest 24 hours
 	now := share.Now
 	dateOffset := now.Unix() - 60*60*24
@@ -148,7 +150,7 @@ func WordCloud(bot_info share.BotSettingsType, bot_request *share.BotRequest, co
 	_, err = share.SendPhoto(bot_info, strconv.Itoa(int(chat_id)), buf.Bytes(), map[string]any{
 		"caption":              wordCloudContentTemplate,
 		"parse_mode":           "MarkdownV2",
-		"disable_notification": "true",
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
 	})
 	return err
 }

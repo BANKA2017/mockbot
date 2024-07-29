@@ -28,7 +28,7 @@ func BotSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest, 
 	inlineKeyboard := share.BotSettings.InlineKeyboardBuilder(share.BotSettingTemplate, bot_info["bot_id"], "bot")
 
 	_, err := share.SendMessage(bot_info, chat_id, "⚙️ Bot settings", map[string]any{
-		"disable_notification": "true",
+		// "disable_notification": "true",
 		"reply_markup": share.TgInlineKeyboardMarkup{
 			InlineKeyboard: inlineKeyboard,
 		},

@@ -89,7 +89,10 @@ func main() {
 					if len(res.Result) > 0 {
 						share.BotOffset[botID] = res.Result[len(res.Result)-1].UpdateID
 						for _, content := range res.Result {
-							bot.Bot(botID, botSettings, &content)
+							code, err := bot.Bot(botID, botSettings, &content)
+							if err != nil {
+								log.Println(code, err)
+							}
 						}
 					}
 				}

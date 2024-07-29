@@ -26,7 +26,13 @@ func Hey(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 	var total int64
 	if !errors.Is(err, gorm.ErrRecordNotFound) && int64(checkinStatus.Date) >= share.TodayBeginning() {
 		// TODO update messages
-		_, err := share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s 今天已经签到过了", bot_request.Message.From.FirstName, bot_request.Message.From.LastName), map[string]any{"disable_notification": "true"})
+		_, err := share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s 今天已经签到过了", bot_request.Message.From.FirstName, bot_request.Message.From.LastName), map[string]any{
+			"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
+			"reply_parameters": map[string]int{
+				"message_id": bot_request.Message.MessageID,
+				"chat_id":    int(chat_id),
+			},
+		})
 		return err
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		err = share.GormDB.R.Model(&model.Checkin{}).Where("user_id = ?", user_id).Count(&total).Error
@@ -46,6 +52,12 @@ func Hey(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 		return err
 	}
 
-	_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s 签到成功！共签到 %d 天", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, total), map[string]any{"disable_notification": "true"})
+	_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s 签到成功！共签到 %d 天", bot_request.Message.From.FirstName, bot_request.Message.From.LastName, total), map[string]any{
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
+		"reply_parameters": map[string]int{
+			"message_id": bot_request.Message.MessageID,
+			"chat_id":    int(chat_id),
+		},
+	})
 	return err
 }

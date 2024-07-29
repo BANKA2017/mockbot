@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/BANKA2017/mockbot/share"
@@ -50,7 +51,7 @@ func At(bot_info share.BotSettingsType, chat_id int64, bot_request *share.BotReq
 	bot_info["runtime_tmp_variable_ignore_auto_delete"] = "1"
 	_, err := share.SendMessage(bot_info, chat_id, response, map[string]any{
 		"parse_mode":           "MarkdownV2",
-		"disable_notification": "true",
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
 	})
 	return err
 }

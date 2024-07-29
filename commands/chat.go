@@ -21,9 +21,9 @@ func Get(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 	if value := share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), content); value != "" {
 		text = "`" + content + "`->`" + value + "`"
 	} else {
-		text = "还没有设定 `" + content + "` ，将使用默认值"
+		text = "还没有设定 `" + content + "` ，如有必要将会使用默认值"
 	}
-	_, err := share.SendMessage(bot_info, chat_id, text, map[string]any{"disable_notification": "true"})
+	_, err := share.SendMessage(bot_info, chat_id, text, map[string]any{"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1"})
 	return err
 }
 
@@ -51,9 +51,9 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 				if err != nil {
 					return err
 				}
-				_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]%s \\-\\> %s", kv[0], originalSetting, newValue), map[string]any{
+				_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]%s \\-\\> `%s`", kv[0], originalSetting, newValue), map[string]any{
 					"parse_mode":           "MarkdownV2",
-					"disable_notification": "true",
+					"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
 				})
 				return err
 			}
@@ -63,9 +63,9 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 			if err != nil {
 				return err
 			}
-			_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]\\-\\> %s", kv[0], share.FixMarkdownV2(newValue)), map[string]any{
+			_, err = share.SendMessage(bot_info, chat_id, fmt.Sprintf("已修改聊天设置 [%s]\\-\\> `%s`", kv[0], share.FixMarkdownV2(newValue)), map[string]any{
 				"parse_mode":           "MarkdownV2",
-				"disable_notification": "true",
+				"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
 			})
 			return err
 		}
@@ -80,7 +80,7 @@ func ChatSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest,
 	//log.Println(inlineKeyboard)
 
 	_, err := share.SendMessage(bot_info, chat_id, "⚙️ Chat settings", map[string]any{
-		"disable_notification": "true",
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
 		"reply_markup": share.TgInlineKeyboardMarkup{
 			InlineKeyboard: inlineKeyboard,
 		},
