@@ -31,17 +31,6 @@ var CommandSettings = map[string]CommandListItem{
 	"/bot_settings":  {Level: []string{"staff"}, ChatType: []string{"private"}, Callback: command.BotSettings},
 }
 
-var CommandList = []string{}
-
-// TODO cache key board
-// var CallbackInlineKeyboardCache sync.Map
-
-func InitCommandList() {
-	for command := range CommandSettings {
-		CommandList = append(CommandList, command)
-	}
-}
-
 func isMeow(text string) bool {
 	text = strings.TrimSpace(regexp.MustCompile(`(?m)@[\w]+(\s|$)`).ReplaceAllString(text, ""))
 	text = strings.TrimSpace(regexp.MustCompile(`(?m)喵+`).ReplaceAllString(text, "喵")) //meow?
@@ -84,10 +73,11 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	// precheck
 	isAtBot := false
-	isPrivate := content.Message.Chat.Type == "private"
-	isGroup := content.Message.Chat.Type == "group" || content.Message.Chat.Type == "supergroup"
-	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
 	isCallback := content.CallbackQuery.ID != ""
+
+	isPrivate := isCallback && content.CallbackQuery.Message.Chat.Type == "private" || !isCallback && content.Message.Chat.Type == "private"
+	isGroup := isCallback && (content.CallbackQuery.Message.Chat.Type == "group" || content.CallbackQuery.Message.Chat.Type == "supergroup") || !isCallback && (content.Message.Chat.Type == "group" || content.Message.Chat.Type == "supergroup")
+	isReplyTheBot := strconv.Itoa(content.Message.ReplyToMessage.From.ID) == bot_id
 
 	text := content.Message.Text
 	if text == "" {
@@ -120,67 +110,48 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 	// callback
 	if isCallback {
 		// TODO check cors?
-		// TODO fix concurrent?
 
 		data := strings.Split(content.CallbackQuery.Data, ":")
 
-		// TODO FIX!!! DO NOT TRUST THE INPUTED DATA!!!!!!
-		/// INPUT THEM FROM YOUR TEMPLATE
-		if len(data) < 3 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && !slices.Contains([]string{"mute", "enable_word_cloud"}, data[1])) || (data[0] == "bot" && !slices.Contains([]string{"auto_delete"}, data[1]) || !slices.Contains([]string{"0", "1"}, data[2])) {
+		if len(data) != 2 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && (!isGroup || !slices.Contains([]string{"mute", "enable_word_cloud"}, data[1]))) || (data[0] == "bot" && (!isPrivate || !slices.Contains([]string{"auto_delete"}, data[1]))) {
 			return 400, fmt.Errorf("Invalid callback data")
 		}
 
+		var callbackID string
 		switch data[0] {
 		case "chat":
 			if !IsAdmin(bot_info, content.CallbackQuery.Message.Chat.ID, int64(content.CallbackQuery.From.ID)) {
 				return 403, fmt.Errorf("Not the administrator")
 			}
+			callbackID = strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID))
 		case "bot":
-			// staff only
-			if !IsStaff(bot_info, int64(content.Message.From.ID)) {
+			if !IsStaff(bot_info, int64(content.CallbackQuery.From.ID)) {
 				return 403, fmt.Errorf("Not the staff")
 			}
-		}
-
-		callbackID := strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID))
-		if data[0] == "bot" {
 			callbackID = strconv.Itoa(int(content.CallbackQuery.Message.From.ID))
 		}
 
-		share.SetBotSettings(data[0], callbackID, data[1], data[2])
+		share.SetBotSettings(data[0], callbackID, data[1], share.BotSwapValueMap[share.GetBotSettings(data[0], callbackID, data[1])])
 
-		// find x and y of callback
-		callbackX := 0
-		callbackY := 0
-		findCallback := false
-
-		for callbackY = range content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard {
-			for callbackX = range content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY] {
-				if content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].CallbackData == content.CallbackQuery.Data {
-					findCallback = true
-					content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].Text = fmt.Sprintf("%s %s", share.BotSettingEnabledTemplate[data[2]], data[1])
-					data[2] = share.BotSwapValueMap[data[2]]
-
-					content.CallbackQuery.Message.ReplyMarkup.InlineKeyboard[callbackY][callbackX].CallbackData = strings.Join(data, ":")
-					break
-				}
-				if findCallback {
-					break
-				}
-			}
+		var inlineKeyboard [][]share.TgInlineKeyboard
+		if data[0] == "chat" {
+			inlineKeyboard = share.BotChatSettings.InlineKeyboardBuilder(share.BotChatSettingTemplate, callbackID, "chat")
+		} else {
+			inlineKeyboard = share.BotSettings.InlineKeyboardBuilder(share.BotSettingTemplate, callbackID, "bot")
 		}
 
-		bot_info["runtime_tmp_variable_ignore_auto_delete"] = "1"
-		_, err := share.EditMessageText(bot_info, strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID)), strconv.Itoa(int(content.CallbackQuery.Message.MessageID)), map[string]any{
-			"text":         content.CallbackQuery.Message.Text,
-			"reply_markup": content.CallbackQuery.Message.ReplyMarkup,
+		res, err := share.EditMessageText(bot_info, strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID)), strconv.Itoa(int(content.CallbackQuery.Message.MessageID)), map[string]any{
+			"text": content.CallbackQuery.Message.Text,
+			"reply_markup": share.TgInlineKeyboardMarkup{
+				InlineKeyboard: inlineKeyboard,
+			},
 		})
+		log.Println(res, err)
 
 		return 200, err
 	}
 
 	// text
-
 	for _, entity := range entities {
 		if entity.Type == "mention" && text[entity.Offset+1:entity.Offset+entity.Length] == bot_info["username"] {
 			isAtBot = true

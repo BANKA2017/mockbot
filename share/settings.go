@@ -8,7 +8,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var BotSettings = make(map[string]BotSettingsType)
+type BotSettingsSetType map[string]BotSettingsType
+
+var BotSettings = make(BotSettingsSetType)
 
 var BotSettingTemplate = map[string]string{
 	"auto_delete": "0",
@@ -59,7 +61,7 @@ func SyncBotSettings() {
 	}
 }
 
-var BotChatSettings = make(map[string]BotSettingsType)
+var BotChatSettings = make(BotSettingsSetType)
 
 var BotChatSettingTemplate = map[string]string{
 	"mute":              "0",
@@ -164,4 +166,30 @@ func SetBotSettings(_type string, id string, key string, value string) error {
 	}
 
 	return nil
+}
+
+func (settings BotSettingsSetType) InlineKeyboardBuilder(template BotSettingsType, id string, _type string) [][]TgInlineKeyboard {
+	inlineKeyboard := [][]TgInlineKeyboard{}
+	count := 0
+
+	for key, value := range template {
+		if _, ok := settings[id]; ok {
+			if v, ok := settings[id][key]; ok {
+				value = v
+			}
+		}
+		if count%2 == 0 {
+			inlineKeyboard = append(inlineKeyboard, []TgInlineKeyboard{})
+		}
+
+		inlineKeyboard[count/2] = append(inlineKeyboard[count/2],
+			TgInlineKeyboard{
+				Text:         fmt.Sprintf("%s %s", BotSettingEnabledTemplate[value], key),
+				CallbackData: fmt.Sprintf("%s:%s", _type, key),
+			},
+		)
+
+		count++
+	}
+	return inlineKeyboard
 }

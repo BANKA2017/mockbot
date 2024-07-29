@@ -76,29 +76,7 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 func ChatSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
 	chat_id := bot_request.Message.Chat.ID
 
-	inlineKeyboard := [][]share.TgInlineKeyboard{}
-	count := 0
-
-	for key, value := range share.BotChatSettingTemplate {
-		if _, ok := share.BotChatSettings[strconv.Itoa(int(chat_id))]; ok {
-			if v, ok := share.BotChatSettings[strconv.Itoa(int(chat_id))][key]; ok {
-				value = v
-			}
-		}
-		if count%2 == 0 {
-			inlineKeyboard = append(inlineKeyboard, []share.TgInlineKeyboard{})
-		}
-
-		inlineKeyboard[count/2] = append(inlineKeyboard[count/2],
-			share.TgInlineKeyboard{
-				Text:         fmt.Sprintf("%s %s", share.BotSettingEnabledTemplate[value], key),
-				CallbackData: fmt.Sprintf("%s:%s:%s", "chat", key, share.BotSwapValueMap[value]),
-			},
-		)
-
-		count++
-	}
-
+	inlineKeyboard := share.BotChatSettings.InlineKeyboardBuilder(share.BotChatSettingTemplate, strconv.Itoa(int(chat_id)), "chat")
 	//log.Println(inlineKeyboard)
 
 	_, err := share.SendMessage(bot_info, chat_id, "⚙️ Chat settings", map[string]any{

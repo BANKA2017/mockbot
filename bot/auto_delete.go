@@ -13,11 +13,7 @@ var AutoDeleteLock atomic.Int32
 func AutoDelete(bot_info share.BotSettingsType) error {
 	lock := AutoDeleteLock.Load()
 	//TODO greater than 1?
-	if lock == 1 {
-		log.Println("delete: auto pass")
-		return nil
-	} else if lock > 1 {
-		AutoDeleteLock.Store(1)
+	if lock >= 1 {
 		log.Println("delete: auto pass")
 		return nil
 	}

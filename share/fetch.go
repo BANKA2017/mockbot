@@ -304,8 +304,6 @@ func EditMessageText(bot_info BotSettingsType, chat_id string, message_id string
 	return resp, nil
 }
 
-// T string, []byte
-
 type SendPhotoType struct {
 	Ok          bool   `json:"ok,omitempty"`
 	ErrorCode   int    `json:"error_code,omitempty"`
@@ -325,6 +323,7 @@ type SendPhotoType struct {
 	} `json:"result,omitempty"`
 }
 
+// T string, []byte
 func SendPhoto[T any](bot_info BotSettingsType, chat_id string, photo T, ext map[string]any) (*SendPhotoType, error) {
 	var _body []byte
 	var err error
