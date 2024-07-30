@@ -272,10 +272,10 @@ func DeleteMessages(bot_info BotSettingsType, chat_id string, message_ids []stri
 }
 
 type EditMessageTextType struct {
-	Ok          bool   `json:"ok,omitempty"`
-	Result      bool   `json:"result,omitempty"`
-	ErrorCode   int    `json:"error_code,omitempty"`
-	Description string `json:"description,omitempty"`
+	Ok          bool      `json:"ok,omitempty"`
+	Result      TgMessage `json:"result,omitempty"`
+	ErrorCode   int       `json:"error_code,omitempty"`
+	Description string    `json:"description,omitempty"`
 }
 
 func EditMessageText(bot_info BotSettingsType, chat_id string, message_id string, ext map[string]any) (*EditMessageTextType, error) {
@@ -323,29 +323,32 @@ type SendPhotoType struct {
 	} `json:"result,omitempty"`
 }
 
-// T string, []byte
-func SendPhoto[T any](bot_info BotSettingsType, chat_id string, photo T, ext map[string]any) (*SendPhotoType, error) {
+func SendPhoto[T ~string | ~[]byte](bot_info BotSettingsType, chat_id string, photo T, ext map[string]any) (*SendPhotoType, error) {
 	var _body []byte
 	var err error
 	var contentType = "application/json"
 
 	ext["chat_id"] = chat_id
-	if _, ok := any(photo).(string); ok {
-		ext["photo"] = photo
+
+	switch p := any(photo).(type) {
+	case string:
+		ext["photo"] = p
 		_body, err = JsonEncode(ext)
 
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	case []byte:
 		_body, contentType, err = MultipartBodyBuilder(ext, MultipartBodyBinaryFileType{
 			Name:     "photo",
 			Filename: fmt.Sprintf("%d.png", Now.UnixMilli()),
-			Binary:   any(photo).([]byte),
+			Binary:   p,
 		})
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("Invalid photo type")
 	}
 
 	res, err := Fetch(fmt.Sprintf("%s/bot%s/sendPhoto", Endpoint, bot_info["token"]), "POST", _body, map[string]string{

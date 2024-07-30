@@ -12,6 +12,8 @@ type BotSettingsSetType map[string]BotSettingsType
 
 var BotSettings = make(BotSettingsSetType)
 
+var BotInlineKeyboardSettingTemplate = map[string]string{}
+
 var BotSettingTemplate = map[string]string{
 	"auto_delete": "0",
 }
@@ -31,6 +33,10 @@ func InitBotSettings() {
 
 			// default values
 			BotSettings[v.BotID]["bot_id"] = v.BotID
+			for templateKey, templateValue := range BotInlineKeyboardSettingTemplate {
+				BotSettings[v.BotID][templateKey] = templateValue
+			}
+
 			for templateKey, templateValue := range BotSettingTemplate {
 				BotSettings[v.BotID][templateKey] = templateValue
 			}
@@ -63,9 +69,14 @@ func SyncBotSettings() {
 
 var BotChatSettings = make(BotSettingsSetType)
 
-var BotChatSettingTemplate = map[string]string{
+var BotChatInlineKeyboardSettingTemplate = map[string]string{
 	"mute":              "0",
 	"enable_word_cloud": "0",
+	"auto_word_cloud":   "0",
+}
+
+var BotChatSettingTemplate = map[string]string{
+	"safe_word": "",
 }
 
 var BotSettingEnabledTemplate = map[string]string{
@@ -93,6 +104,10 @@ func InitBotChatSettings() {
 
 			// default values
 			BotChatSettings[v.ChatID]["chat_id"] = v.ChatID
+			for templateKey, templateValue := range BotChatInlineKeyboardSettingTemplate {
+				BotChatSettings[v.ChatID][templateKey] = templateValue
+			}
+
 			for templateKey, templateValue := range BotChatSettingTemplate {
 				BotChatSettings[v.ChatID][templateKey] = templateValue
 			}

@@ -6,8 +6,8 @@
 | flag       | default                    | description              |
 | :--------- | :------------------------- | :----------------------- |
 | `path`     |                            | Path for assets/database |
-| `address`  | `:1323`                    | Web api address          |
-| `endpoint` | `https://api.telegram.org` | Endpoint                 |
+| `webhook`  | `:1323`                    | webhook address          |
+| `endpoint` | `https://api.telegram.org` | Bot api endpoint         |
 | `test`     | `false`                    | Test mode                |
 
 ## Bot commands
@@ -61,6 +61,7 @@ Not yet supported `channel` at all
 
 - [ ] Search `// TODO` or `//TODO` form source code
 - [ ] i18n, Chinese simplify only now
-- [ ] Set staff by command
+- [ ] Modify staff by command
+- [ ] Add bot by command
 - [ ] Web API
 - [ ] ...

@@ -91,11 +91,13 @@ type TgMessage struct {
 	Photo                []TgFile               `json:"photo,omitempty"`
 	Caption              string                 `json:"caption,omitempty"`
 	CaptionEntities      []TgMessageEntity      `json:"caption_entities,omitempty"`
+	EditDate             int                    `json:"edit_date,omitempty"`
 }
 
 type BotRequest struct {
 	UpdateID      int       `json:"update_id,omitempty"`
 	Message       TgMessage `json:"message,omitempty"`
+	Result        TgMessage `json:"result,omitempty"`
 	CallbackQuery struct {
 		ID           string    `json:"id,omitempty"`
 		From         TgUser    `json:"from,omitempty"`

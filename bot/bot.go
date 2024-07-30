@@ -92,12 +92,22 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 	// callback
 	if isCallback {
-		// TODO check cors?
-
 		data := strings.Split(content.CallbackQuery.Data, ":")
 
-		if len(data) != 2 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && (!isGroup || !slices.Contains([]string{"mute", "enable_word_cloud"}, data[1]))) || (data[0] == "bot" && (!isPrivate || !slices.Contains([]string{"auto_delete"}, data[1]))) {
+		if len(data) != 2 || !slices.Contains([]string{"chat", "bot"}, data[0]) || (data[0] == "chat" && !isGroup) || (data[0] == "bot" && !isPrivate) {
 			return 400, fmt.Errorf("Invalid callback data")
+		}
+
+		switch data[1] {
+		case "bot":
+			if _, ok := share.BotInlineKeyboardSettingTemplate[data[1]]; !ok {
+				return 400, fmt.Errorf("Invalid callback data[1]")
+			}
+		case "chat":
+			if _, ok := share.BotChatInlineKeyboardSettingTemplate[data[1]]; !ok {
+				return 400, fmt.Errorf("Invalid callback data[1]")
+			}
+
 		}
 
 		var callbackID string
@@ -118,9 +128,9 @@ func Bot(bot_id string, bot_info share.BotSettingsType, content *share.BotReques
 
 		var inlineKeyboard [][]share.TgInlineKeyboard
 		if data[0] == "chat" {
-			inlineKeyboard = share.BotChatSettings.InlineKeyboardBuilder(share.BotChatSettingTemplate, callbackID, "chat")
+			inlineKeyboard = share.BotChatSettings.InlineKeyboardBuilder(share.BotChatInlineKeyboardSettingTemplate, callbackID, "chat")
 		} else {
-			inlineKeyboard = share.BotSettings.InlineKeyboardBuilder(share.BotSettingTemplate, callbackID, "bot")
+			inlineKeyboard = share.BotSettings.InlineKeyboardBuilder(share.BotInlineKeyboardSettingTemplate, callbackID, "bot")
 		}
 
 		res, err := share.EditMessageText(bot_info, strconv.Itoa(int(content.CallbackQuery.Message.Chat.ID)), strconv.Itoa(int(content.CallbackQuery.Message.MessageID)), map[string]any{

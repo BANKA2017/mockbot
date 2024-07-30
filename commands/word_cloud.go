@@ -97,7 +97,7 @@ func WordCloud(bot_info share.BotSettingsType, bot_request *share.BotRequest, co
 		wordCounts,
 		wordclouds.FontMaxSize(300),
 		wordclouds.FontMinSize(20),
-		wordclouds.FontFile("/root/mockbot/MiSans-Medium.ttf"),
+		wordclouds.FontFile(fmt.Sprintf("%s/font.ttf", share.Path)),
 		wordclouds.Height(1024),
 		wordclouds.Width(1024),
 		wordclouds.Colors(colors),
@@ -147,10 +147,15 @@ func WordCloud(bot_info share.BotSettingsType, bot_request *share.BotRequest, co
 
 	wordCloudContentTemplate := fmt.Sprintf("☁️ %s 热门话题 \\#WordCloud\n⏰ 截至今天 %s\n🗣️ 本群 %d 位朋友共产生 %d 条发言\n🔍 看下有没有你感兴趣的关键词？\n\n活跃用户排行榜：\n\n%s\n🎉感谢这些朋友今天的分享\\!🎉", strings.ReplaceAll(now.Format("01-02"), "-", "\\-"), now.Format("15:04"), userTotal, messageTotal, rankList)
 
+	mute := "false"
+	if share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1" {
+		mute = "true"
+	}
+
 	_, err = share.SendPhoto(bot_info, strconv.Itoa(int(chat_id)), buf.Bytes(), map[string]any{
 		"caption":              wordCloudContentTemplate,
 		"parse_mode":           "MarkdownV2",
-		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
+		"disable_notification": mute,
 	})
 	return err
 }

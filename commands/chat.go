@@ -2,14 +2,11 @@ package command
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/BANKA2017/mockbot/share"
 )
-
-//TODO inline
 
 // Get chat settings
 func Get(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
@@ -17,13 +14,12 @@ func Get(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 
 	content = strings.TrimSpace(content)
 
-	text := ""
-	if value := share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), content); value != "" {
-		text = "`" + content + "`->`" + value + "`"
-	} else {
-		text = "还没有设定 `" + content + "` ，如有必要将会使用默认值"
-	}
-	_, err := share.SendMessage(bot_info, chat_id, text, map[string]any{"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1"})
+	text := "`" + content + "` \\-\\> `" + share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), content) + "`"
+
+	_, err := share.SendMessage(bot_info, chat_id, text, map[string]any{
+		"parse_mode":           "MarkdownV2",
+		"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
+	})
 	return err
 }
 
@@ -39,9 +35,9 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 		return fmt.Errorf("invalid content")
 	}
 
-	if slices.Contains([]string{"mute", "safe_word", "enable_word_cloud"}, kv[0]) {
+	if _, ok := share.BotChatSettingTemplate[kv[0]]; ok {
 		if len(kv) == 1 {
-			if slices.Contains([]string{"mute", "enable_word_cloud"}, kv[0]) {
+			if _, ok := share.BotChatInlineKeyboardSettingTemplate[kv[0]]; ok {
 				originalSetting := share.GetBotSettings("chat", strChatID, kv[0])
 				newValue := ""
 				if originalSetting == "" {
@@ -76,7 +72,7 @@ func Set(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 func ChatSettings(bot_info share.BotSettingsType, bot_request *share.BotRequest, content string) error {
 	chat_id := bot_request.Message.Chat.ID
 
-	inlineKeyboard := share.BotChatSettings.InlineKeyboardBuilder(share.BotChatSettingTemplate, strconv.Itoa(int(chat_id)), "chat")
+	inlineKeyboard := share.BotChatSettings.InlineKeyboardBuilder(share.BotChatInlineKeyboardSettingTemplate, strconv.Itoa(int(chat_id)), "chat")
 	//log.Println(inlineKeyboard)
 
 	_, err := share.SendMessage(bot_info, chat_id, "⚙️ Chat settings", map[string]any{

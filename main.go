@@ -22,10 +22,10 @@ func main() {
 	flag.StringVar(&share.Path, "path", "", "Assets/Databases")
 
 	// endpoint
-	flag.StringVar(&share.Endpoint, "endpoint", "https://api.telegram.org", "https://api.telegram.org")
+	flag.StringVar(&share.Endpoint, "endpoint", "https://api.telegram.org", "bot api endpoint")
 
 	//api
-	flag.StringVar(&share.Address, "address", ":1323", "address :1323")
+	flag.StringVar(&share.Address, "webhook", ":1323", "webhook :1323")
 
 	// others
 	flag.BoolVar(&share.TestMode, "test", false, "Test mode")
