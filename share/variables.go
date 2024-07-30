@@ -2,9 +2,10 @@ package share
 
 import "github.com/yanyiwu/gojieba"
 
-var DBPath string
+var Path string
 var Address string
 var TestMode bool
+var Endpoint string
 
 var JiebaPtr *gojieba.Jieba
 

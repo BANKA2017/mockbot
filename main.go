@@ -19,17 +19,20 @@ var err error
 
 func main() {
 	// sqlite
-	flag.StringVar(&share.DBPath, "db_path", "", "Database path")
+	flag.StringVar(&share.Path, "path", "", "Assets/Databases")
 
-	//endpoint
+	// endpoint
+	flag.StringVar(&share.Endpoint, "endpoint", "https://api.telegram.org", "https://api.telegram.org")
+
+	//api
 	flag.StringVar(&share.Address, "address", ":1323", "address :1323")
 
 	// others
 	flag.BoolVar(&share.TestMode, "test", false, "Test mode")
 	flag.Parse()
 
-	if share.DBPath == "" {
-		log.Fatal("MAIN: Path of database is empty")
+	if share.Path == "" {
+		log.Fatal("MAIN: Path of assets is empty")
 	}
 
 	// connect to db
@@ -39,15 +42,15 @@ func main() {
 	}
 
 	// sqlite
-	if _, err := os.Stat(share.DBPath); err != nil && os.IsNotExist(err) {
+	if _, err := os.Stat(share.Path + "/mockbot.db"); err != nil && os.IsNotExist(err) {
 		log.Fatal("MAIN: Database is not exists")
 	}
-	share.GormDB.R, share.GormDB.W, err = share.ConnectToSQLite(share.DBPath, logLevel, "mockbot")
+	share.GormDB.R, share.GormDB.W, err = share.ConnectToSQLite(share.Path+"/mockbot.db", logLevel, "mockbot")
 	if err != nil {
 		log.Fatal("DB:", err)
 	}
 
-	// init Gse
+	// init Jieba
 	share.JiebaPtr = gojieba.NewJieba()
 
 	// jpDict, _ := os.ReadFile("/root/mockbot/dict.txt")

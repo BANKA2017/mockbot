@@ -102,7 +102,7 @@ type GetMeType struct {
 }
 
 func GetMe(bot_info BotSettingsType) (*GetMeType, error) {
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getMe", bot_info["token"]), "GET", nil, map[string]string{})
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/getMe", Endpoint, bot_info["token"]), "GET", nil, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func GetUpdates(bot_info BotSettingsType, offset string, timeout int) (*GetUpdat
 		return nil, err
 	}
 
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates", bot_info["token"]), "POST", _body, map[string]string{
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/getUpdates", Endpoint, bot_info["token"]), "POST", _body, map[string]string{
 		"Content-Type": "application/json",
 	})
 	if err != nil {
@@ -175,7 +175,7 @@ type GetChatAdministratorsType struct {
 }
 
 func GetChatAdministrators(bot_info BotSettingsType, chat_id int64) (*GetChatAdministratorsType, error) {
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/getChatAdministrators", bot_info["token"]), "POST", []byte(fmt.Sprintf("chat_id=%d", chat_id)), map[string]string{})
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/getChatAdministrators", Endpoint, bot_info["token"]), "POST", []byte(fmt.Sprintf("chat_id=%d", chat_id)), map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func SendMessage(bot_info BotSettingsType, chat_id int64, text string, ext map[s
 		return nil, err
 	}
 
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", bot_info["token"]), "POST", _body, map[string]string{
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/sendMessage", Endpoint, bot_info["token"]), "POST", _body, map[string]string{
 		"Content-Type": "application/json",
 	})
 	if err != nil {
@@ -255,7 +255,7 @@ func DeleteMessages(bot_info BotSettingsType, chat_id string, message_ids []stri
 		return nil, err
 	}
 
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/deleteMessages", bot_info["token"]), "POST", _body, map[string]string{
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/deleteMessages", Endpoint, bot_info["token"]), "POST", _body, map[string]string{
 		"Content-Type": "application/json",
 	})
 	if err != nil {
@@ -288,7 +288,7 @@ func EditMessageText(bot_info BotSettingsType, chat_id string, message_id string
 		return nil, err
 	}
 
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/editMessageText", bot_info["token"]), "POST", _body, map[string]string{
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/editMessageText", Endpoint, bot_info["token"]), "POST", _body, map[string]string{
 		"Content-Type": "application/json",
 	})
 	if err != nil {
@@ -348,7 +348,7 @@ func SendPhoto[T any](bot_info BotSettingsType, chat_id string, photo T, ext map
 		}
 	}
 
-	res, err := Fetch(fmt.Sprintf("https://api.telegram.org/bot%s/sendPhoto", bot_info["token"]), "POST", _body, map[string]string{
+	res, err := Fetch(fmt.Sprintf("%s/bot%s/sendPhoto", Endpoint, bot_info["token"]), "POST", _body, map[string]string{
 		"Content-Type": contentType,
 	})
 	if err != nil {
