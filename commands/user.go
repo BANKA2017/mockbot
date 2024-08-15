@@ -29,7 +29,7 @@ func Me(bot_info share.BotSettingsType, bot_request *share.BotRequest, content s
 	var total int64
 	isNotYetCheckinText := "今天还没有签到"
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		if int64(checkinStatus.Date) >= share.TodayBeginning() {
+		if int64(checkinStatus.Date) >= share.LocaleTimeDiff(0) {
 			isNotYetCheckinText = "今天已经签到过了"
 		}
 

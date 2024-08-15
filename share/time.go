@@ -11,9 +11,12 @@ func UpdateNow() {
 	Now = time.Now().In(LocalTime)
 }
 
-func TodayBeginning() int64 {
-	if Now.Local().Hour() >= 8 {
-		return Now.Unix() - Now.Unix()%86400 - 8*3600
+func LocaleTimeDiff(hour int64) int64 {
+	targetTime := time.Date(Now.Year(), Now.Month(), Now.Day(), int(hour), 0, 0, 0, LocalTime)
+
+	if targetTime.After(Now) {
+		targetTime = targetTime.Add(-24 * time.Hour)
 	}
-	return Now.Unix() - Now.Unix()%86400 + 86400 - 8*3600
+
+	return targetTime.Unix()
 }

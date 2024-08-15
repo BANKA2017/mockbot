@@ -24,7 +24,7 @@ func Hey(bot_info share.BotSettingsType, bot_request *share.BotRequest, content 
 	//TODO span
 	// span := 1
 	var total int64
-	if !errors.Is(err, gorm.ErrRecordNotFound) && int64(checkinStatus.Date) >= share.TodayBeginning() {
+	if !errors.Is(err, gorm.ErrRecordNotFound) && int64(checkinStatus.Date) >= share.LocaleTimeDiff(0) {
 		// TODO update messages
 		_, err := share.SendMessage(bot_info, chat_id, fmt.Sprintf("%s %s 今天已经签到过了", bot_request.Message.From.FirstName, bot_request.Message.From.LastName), map[string]any{
 			"disable_notification": share.GetBotSettings("chat", strconv.Itoa(int(chat_id)), "mute") == "1",
